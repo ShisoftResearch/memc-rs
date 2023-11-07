@@ -1,5 +1,5 @@
 use crate::cache::cache::{
-    impl_details::CacheImplDetails, Cache, CacheMetaData, CachePredicate, CacheReadOnlyView,
+    impl_details::CacheImplDetails, Cache, CacheMetaData, CachePredicate,
     KeyType, Record, RemoveIfResult, SetStatus,
 };
 use crate::cache::error::Result;
@@ -53,7 +53,7 @@ impl RandomPolicy {
 
             res.iter().for_each(|record| match record {
                 Some(val) => {
-                    let len = val.1.len();
+                    let len = val.len();
                     debug!("Evicted: {} bytes from storage", len);
                     usage = self.decr_mem_usage(len as u64);
                 }
@@ -101,20 +101,16 @@ impl Cache for RandomPolicy {
     }
 
     // Removes key value and returns as an option
-    fn remove(&self, key: &KeyType) -> Option<(KeyType, Record)> {
+    fn remove(&self, key: &KeyType) -> Option<Record> {
         let result = self.store.remove(key);
         if let Some(key_value) = &result {
-            self.decr_mem_usage(key_value.1.len() as u64);
+            self.decr_mem_usage(key_value.len() as u64);
         }
         result
     }
 
     fn flush(&self, header: CacheMetaData) {
         self.store.flush(header)
-    }
-
-    fn as_read_only(&self) -> Box<dyn CacheReadOnlyView> {
-        self.store.as_read_only()
     }
 
     fn remove_if(&self, f: &mut CachePredicate) -> RemoveIfResult {

@@ -1,42 +1,25 @@
 use crate::cache::cache::{
-    impl_details, Cache, CacheMetaData, CachePredicate, CacheReadOnlyView, KeyType, Record,
+    impl_details, Cache, CacheMetaData, CachePredicate, KeyType, Record,
     RemoveIfResult, SetStatus,
 };
 use crate::cache::error::{CacheError, Result};
 use crate::server::timer;
-use dashmap::mapref::multiple::RefMulti;
-use dashmap::{DashMap, ReadOnlyView};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-type Storage = DashMap<KeyType, Record>;
+use lightning::map::{PtrHashMap, Map};
+
+type Storage = PtrHashMap<KeyType, Record>;
 pub struct MemoryStore {
     memory: Storage,
     timer: Arc<dyn timer::Timer + Send + Sync>,
     cas_id: AtomicU64,
 }
 
-type StorageReadOnlyView = ReadOnlyView<KeyType, Record>;
-
-impl<'a> CacheReadOnlyView<'a> for StorageReadOnlyView {
-    fn len(&self) -> usize {
-        StorageReadOnlyView::len(self)
-    }
-
-    fn is_empty(&self) -> bool {
-        StorageReadOnlyView::is_empty(self)
-    }
-
-    fn keys(&'a self) -> Box<dyn Iterator<Item = &'a KeyType> + 'a> {
-        let keys = self.keys();
-        Box::new(keys)
-    }
-}
-
 impl MemoryStore {
     pub fn new(timer: Arc<dyn timer::Timer + Send + Sync>) -> MemoryStore {
         MemoryStore {
-            memory: DashMap::new(),
+            memory: PtrHashMap::with_capacity(1024),
             timer,
             cas_id: AtomicU64::new(1),
         }
@@ -74,14 +57,14 @@ impl impl_details::CacheImplDetails for MemoryStore {
 
 impl Cache for MemoryStore {
     // Removes key value and returns as an option
-    fn remove(&self, key: &KeyType) -> Option<(KeyType, Record)> {
-        self.memory.remove(key)
+    fn remove(&self, key: &KeyType) -> Option<Record> {
+        self.memory.lock(key).map(|g| g.remove())
     }
 
     fn set(&self, key: KeyType, mut record: Record) -> Result<SetStatus> {
         //trace!("Set: {:?}", &record.header);
         if record.header.cas > 0 {
-            match self.memory.get_mut(&key) {
+            match self.memory.lock(&key) {
                 Some(mut key_value) => {
                     if key_value.header.cas != record.header.cas {
                         Err(CacheError::KeyExists)
@@ -111,46 +94,41 @@ impl Cache for MemoryStore {
     }
 
     fn delete(&self, key: KeyType, header: CacheMetaData) -> Result<Record> {
-        let mut cas_match: Option<bool> = None;
-        match self.memory.remove_if(&key, |_key, record| -> bool {
-            let result = header.cas == 0 || record.header.cas == header.cas;
-            cas_match = Some(result);
-            result
-        }) {
-            Some(key_value) => Ok(key_value.1),
-            None => match cas_match {
-                Some(_value) => Err(CacheError::KeyExists),
-                None => Err(CacheError::NotFound),
-            },
+        match self.memory.lock(&key) {
+            Some(record) => {
+                if header.cas == 0 || record.header.cas == header.cas {
+                    return Ok(record.remove());
+                } else {
+                    return Err(CacheError::KeyExists);
+                }
+            }
+            None => Err(CacheError::NotFound)
         }
     }
 
     fn flush(&self, header: CacheMetaData) {
         if header.time_to_live > 0 {
-            self.memory.alter_all(|_key, mut value| {
-                value.header.time_to_live = header.time_to_live;
-                value
-            });
+            for k in self.memory.keys() {
+                if let Some(mut value) = self.memory.lock(&k) {
+                    value.header.time_to_live = header.time_to_live;
+                }
+            }
         } else {
             self.memory.clear();
         }
     }
 
-    fn as_read_only(&self) -> Box<dyn CacheReadOnlyView> {
-        let storage_clone = self.memory.clone();
-        Box::new(storage_clone.into_read_only())
-    }
-
     fn remove_if(&self, f: &mut CachePredicate) -> RemoveIfResult {
         let items: Vec<KeyType> = self
             .memory
-            .iter()
-            .filter(|record: &RefMulti<KeyType, Record>| f(record.key(), record.value()))
-            .map(|record: RefMulti<KeyType, Record>| record.key().clone())
+            .entries()
+            .into_iter()
+            .filter(|(k, v)| f(k, v))
+            .map(|(k, _v)| k)
             .collect();
 
-        let result: Vec<Option<(KeyType, Record)>> =
-            items.iter().map(|key: &KeyType| self.remove(key)).collect();
+        let result: Vec<Option<Record>> =
+            items.into_iter().map(|key| self.remove(&key)).collect();
         result
     }
 
@@ -159,6 +137,6 @@ impl Cache for MemoryStore {
     }
 
     fn is_empty(&self) -> bool {
-        self.memory.is_empty()
+        self.memory.len() == 0
     }
 }
