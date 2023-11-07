@@ -33,7 +33,7 @@ impl MemoryStore {
 impl impl_details::CacheImplDetails for MemoryStore {
     fn get_by_key(&self, key: &KeyType) -> Result<Record> {
         match self.memory.get(key) {
-            Some(record) => Ok(record.clone()),
+            Some(record) => Ok(record),
             None => Err(CacheError::NotFound),
         }
     }
