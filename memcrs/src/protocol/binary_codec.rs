@@ -661,7 +661,7 @@ impl MemcacheBinaryCodec {
                 if !response.key.is_empty() {
                     dst.put_slice(&response.key[..]);
                 }
-                dst.put(response.value.clone());
+                dst.put_slice(&response.value[..]);
             }
             BinaryResponse::Set(_response)
             | BinaryResponse::Replace(_response)
@@ -715,7 +715,7 @@ impl MemcacheBinaryCodec {
             | BinaryResponse::GetQuietly(response) => {
                 dst.put_u32(response.flags);
                 dst.put_slice(&response.key[..]);
-                dst.put(response.value.clone());
+                dst.put_slice(&response.value[..]);
             }
             BinaryResponse::Set(_response)
             | BinaryResponse::Replace(_response)
