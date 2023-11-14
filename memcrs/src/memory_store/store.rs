@@ -32,10 +32,7 @@ impl MemoryStore {
 
 impl impl_details::CacheImplDetails for MemoryStore {
     fn get_by_key(&self, key: &KeyType) -> Result<Record> {
-        match self.memory.get(key) {
-            Some(record) => Ok(record),
-            None => Err(CacheError::NotFound),
-        }
+        self.memory.get(key).ok_or(CacheError::NotFound)
     }
 
     fn check_if_expired(&self, key: &KeyType, record: &Record) -> bool {
@@ -58,7 +55,7 @@ impl impl_details::CacheImplDetails for MemoryStore {
 impl Cache for MemoryStore {
     // Removes key value and returns as an option
     fn remove(&self, key: &KeyType) -> Option<Record> {
-        self.memory.lock(key).map(|g| g.remove())
+        self.memory.remove(&key)
     }
 
     fn set(&self, key: KeyType, mut record: Record) -> Result<SetStatus> {
@@ -94,15 +91,19 @@ impl Cache for MemoryStore {
     }
 
     fn delete(&self, key: KeyType, header: CacheMetaData) -> Result<Record> {
-        match self.memory.lock(&key) {
-            Some(record) => {
-                if header.cas == 0 || record.header.cas == header.cas {
-                    return Ok(record.remove());
-                } else {
-                    return Err(CacheError::KeyExists);
+        if header.cas == 0 {
+            return self.memory.remove(&key).ok_or(CacheError::NotFound)
+        } else {  
+            match self.memory.lock(&key) {
+                Some(record) => {
+                    if record.header.cas == header.cas {
+                        return Ok(record.remove());
+                    } else {
+                        return Err(CacheError::KeyExists);
+                    }
                 }
+                None => Err(CacheError::NotFound)
             }
-            None => Err(CacheError::NotFound)
         }
     }
 
