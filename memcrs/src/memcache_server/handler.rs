@@ -400,7 +400,7 @@ mod tests {
             key,
             flags: FLAGS,
             expiration: 0,
-            value: value.clone(),
+            value,
         });
 
         let result = handler.handle_request(request);
