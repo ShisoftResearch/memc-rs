@@ -40,7 +40,7 @@ pub struct MockServer {
 impl MockServer {
     pub fn new() -> Self {
         let timer = Arc::new(MockSystemTimer::new());
-        let store = Arc::new(MemoryStore::new(timer.clone()));
+        let store = Arc::new(MemoryStore::new(timer.clone(), 8192));
         MockServer {
             timer: timer,
             storage: MemcStore::new(store),
@@ -54,5 +54,5 @@ pub fn create_server() -> MockServer {
 
 pub fn create_storage() -> Arc<MemcStore> {
     let timer = Arc::new(MockSystemTimer::new());
-    Arc::new(MemcStore::new(Arc::new(MemoryStore::new(timer))))
+    Arc::new(MemcStore::new(Arc::new(MemoryStore::new(timer, 8192))))
 }

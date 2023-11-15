@@ -17,9 +17,9 @@ pub struct MemoryStore {
 }
 
 impl MemoryStore {
-    pub fn new(timer: Arc<dyn timer::Timer + Send + Sync>) -> MemoryStore {
+    pub fn new(timer: Arc<dyn timer::Timer + Send + Sync>, cap: usize) -> MemoryStore {
         MemoryStore {
-            memory: PtrHashMap::with_capacity(1024),
+            memory: PtrHashMap::with_capacity(cap.next_power_of_two()),
             timer,
             cas_id: AtomicU64::new(1),
         }

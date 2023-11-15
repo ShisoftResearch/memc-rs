@@ -3,6 +3,7 @@ use super::random_policy::RandomPolicy;
 use crate::cache::cache::Cache;
 use crate::memory_store::store::MemoryStore;
 use crate::server::timer;
+use std::cmp::max;
 use std::sync::Arc;
 
 pub struct MemcacheStoreConfig {
@@ -31,7 +32,8 @@ impl MemcacheStoreBuilder {
         config: MemcacheStoreConfig,
         timer: Arc<dyn timer::Timer + Send + Sync>,
     ) -> Arc<dyn Cache + Send + Sync> {
-        let store_engine = Arc::new(MemoryStore::new(timer));
+        let cap = max(config.memory_limit * 1024 * 1024 / 4096, 8192) as usize;
+        let store_engine = Arc::new(MemoryStore::new(timer, cap));
         let store: Arc<dyn Cache + Send + Sync> = match config.policy {
             EvictionPolicy::Random => {
                 Arc::new(RandomPolicy::new(store_engine, config.memory_limit))
