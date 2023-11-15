@@ -32,7 +32,7 @@ impl MemcacheStoreBuilder {
         config: MemcacheStoreConfig,
         timer: Arc<dyn timer::Timer + Send + Sync>,
     ) -> Arc<dyn Cache + Send + Sync> {
-        let cap = max(config.memory_limit * 1024 * 1024 / 4096, 8192) as usize;
+        let cap = max(config.memory_limit * 1024 * 1024 / 1024, 8192) as usize;
         let store_engine = Arc::new(MemoryStore::new(timer, cap));
         let store: Arc<dyn Cache + Send + Sync> = match config.policy {
             EvictionPolicy::Random => {
