@@ -477,6 +477,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "num_cpus",
+ "parking_lot",
  "rand",
  "serde",
  "serde_derive",

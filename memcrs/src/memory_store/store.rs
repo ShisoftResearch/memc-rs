@@ -1,6 +1,6 @@
 use crate::cache::cache::{
     impl_details, Cache, CacheMetaData, CachePredicate, KeyType, Record,
-    RemoveIfResult, SetStatus,
+    RemoveIfResult, SetStatus, ValueType,
 };
 use crate::cache::error::{CacheError, Result};
 use crate::server::timer;
@@ -8,10 +8,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use lightning::map::{PtrHashMap, Map};
+use parking_lot::Mutex;
 
 type Storage = PtrHashMap<KeyType, Record>;
+type Recorder = PtrHashMap<KeyType, Arc<Mutex<Vec<(char, Option<Record>)>>>>;
+
 pub struct MemoryStore {
     memory: Storage,
+    recorder: Recorder,
     timer: Arc<dyn timer::Timer + Send + Sync>,
     cas_id: AtomicU64,
 }
@@ -20,6 +24,7 @@ impl MemoryStore {
     pub fn new(timer: Arc<dyn timer::Timer + Send + Sync>, cap: usize) -> MemoryStore {
         MemoryStore {
             memory: PtrHashMap::with_capacity(cap.next_power_of_two()),
+            recorder: PtrHashMap::with_capacity(cap.next_power_of_two()),
             timer,
             cas_id: AtomicU64::new(1),
         }
@@ -28,38 +33,26 @@ impl MemoryStore {
     fn get_cas_id(&self) -> u64 {
         self.cas_id.fetch_add(1, Ordering::Release)
     }
-}
 
-impl impl_details::CacheImplDetails for MemoryStore {
-    fn get_by_key(&self, key: &KeyType) -> Result<Record> {
+    fn push_record(&self, key: &KeyType, op: char, rec: Option<&Record>) {
+        loop {
+            if let Some(recs_mutex) = self.recorder.get(key) {
+                let mut recs = recs_mutex.lock();
+                recs.push((op, rec.cloned()));
+                break;
+            } else {
+                self.recorder.try_insert(key.clone(), Arc::new(Mutex::new(vec![])));
+            }
+        }
+    }
+
+    fn store_get(&self, key: &KeyType) -> Result<Record> {
         self.memory.get(key).ok_or(CacheError::NotFound)
     }
-
-    fn check_if_expired(&self, key: &KeyType, record: &Record) -> bool {
-        let current_time = self.timer.timestamp();
-
-        if record.header.time_to_live == 0 {
-            return false;
-        }
-
-        if record.header.timestamp + (record.header.time_to_live as u64) > current_time {
-            return false;
-        }
-        match self.remove(key) {
-            Some(_) => true,
-            None => true,
-        }
-    }
-}
-
-impl Cache for MemoryStore {
-    // Removes key value and returns as an option
-    fn remove(&self, key: &KeyType) -> Option<Record> {
+    fn store_remove(&self, key: &KeyType)  -> Option<Record> {
         self.memory.remove(&key)
     }
-
-    fn set(&self, key: KeyType, mut record: Record) -> Result<SetStatus> {
-        //trace!("Set: {:?}", &record.header);
+    fn store_set(&self, key: KeyType, mut record: Record) -> Result<SetStatus> {
         if record.header.cas > 0 {
             match self.memory.lock(&key) {
                 Some(mut key_value) => {
@@ -89,8 +82,7 @@ impl Cache for MemoryStore {
             Ok(SetStatus { cas })
         }
     }
-
-    fn delete(&self, key: KeyType, header: CacheMetaData) -> Result<Record> {
+    fn store_delete(&self, key: KeyType, header: CacheMetaData) -> Result<Record> {
         if header.cas == 0 {
             return self.memory.remove(&key).ok_or(CacheError::NotFound)
         } else {  
@@ -105,6 +97,50 @@ impl Cache for MemoryStore {
                 None => Err(CacheError::NotFound)
             }
         }
+    }
+}
+
+impl impl_details::CacheImplDetails for MemoryStore {
+    fn get_by_key(&self, key: &KeyType) -> Result<Record> {
+        self.push_record(key, 'g', None);
+        self.store_get(key)
+    }
+
+    fn check_if_expired(&self, key: &KeyType, record: &Record) -> bool {
+        let current_time = self.timer.timestamp();
+
+        if record.header.time_to_live == 0 {
+            return false;
+        }
+
+        if record.header.timestamp + (record.header.time_to_live as u64) > current_time {
+            return false;
+        }
+        match self.remove(key) {
+            Some(_) => true,
+            None => true,
+        }
+    }
+}
+
+impl Cache for MemoryStore {
+    // Removes key value and returns as an option
+    fn remove(&self, key: &KeyType) -> Option<Record> {
+        self.push_record(&key, 'r', None);
+        self.store_remove(key)
+    }
+
+    fn set(&self, key: KeyType, record: Record) -> Result<SetStatus> {
+        self.push_record(&key, 's', Some(&record));
+        self.store_set(key, record)
+    }
+
+    fn delete(&self, key: KeyType, header: CacheMetaData) -> Result<Record> {
+        self.push_record(&key, 'd', Some(&Record {
+            header: header.clone(), 
+            value: ValueType::new()
+        }));
+        self.store_delete(key, header)
     }
 
     fn flush(&self, header: CacheMetaData) {
