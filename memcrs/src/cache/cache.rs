@@ -1,5 +1,6 @@
 use super::error::{CacheError, Result};
 use bytes::Bytes;
+use serde_derive::{Serialize, Deserialize};
 
 /// Cache key type
 pub type KeyType = Bytes;
@@ -8,7 +9,7 @@ pub type KeyType = Bytes;
 pub type ValueType = Bytes;
 
 /// Meta data stored with cache value
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CacheMetaData {
     pub(crate) timestamp: u64,
     pub(crate) cas: u64,

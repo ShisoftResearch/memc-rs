@@ -4,14 +4,27 @@ use crate::cache::cache::{
 };
 use crate::cache::error::{CacheError, Result};
 use crate::server::timer;
+use std::fs::File;
+use std::io::BufWriter;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
+use bincode::serialize_into;
 use lightning::map::{PtrHashMap, Map};
 use parking_lot::Mutex;
+use serde_derive::{Serialize, Deserialize};
 
 type Storage = PtrHashMap<KeyType, Record>;
 type Recorder = PtrHashMap<KeyType, Arc<Mutex<Vec<(char, Option<Record>)>>>>;
+
+#[derive(Serialize, Deserialize)]
+pub struct BytesCodec(Vec<u8>);
+
+#[derive(Serialize, Deserialize)]
+pub struct RecordCodec{
+    header: CacheMetaData,
+    data: BytesCodec
+}
 
 pub struct MemoryStore {
     memory: Storage,
@@ -97,6 +110,19 @@ impl MemoryStore {
                 None => Err(CacheError::NotFound)
             }
         }
+    }
+    fn dump_recording(&self, filename: &String) {
+        let mut all = self.recorder
+            .entries()
+            .into_iter()
+            .map(|(k, v)| {
+                let vg = v.lock();
+                let val = vg.clone();
+                (k, val)
+            })
+            .collect::<Vec<_>>();
+        let mut f = BufWriter::new(File::create(filename).unwrap());
+        serialize_into(&mut f, &all).unwrap();
     }
 }
 
