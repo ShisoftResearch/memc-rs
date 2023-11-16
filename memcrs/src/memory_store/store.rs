@@ -13,6 +13,7 @@ use bincode::serialize_into;
 use lightning::map::{PtrHashMap, Map};
 use parking_lot::Mutex;
 use serde_derive::{Serialize, Deserialize};
+use bytes::Bytes;
 
 type Storage = PtrHashMap<KeyType, Record>;
 type Recorder = PtrHashMap<KeyType, Arc<Mutex<Vec<(char, Option<Record>)>>>>;
@@ -112,13 +113,18 @@ impl MemoryStore {
         }
     }
     fn dump_recording(&self, filename: &String) {
-        let mut all = self.recorder
+        let all = self.recorder
             .entries()
             .into_iter()
             .map(|(k, v)| {
                 let vg = v.lock();
                 let val = vg.clone();
-                (k, val)
+                let kb = BytesCodec::from_bytes(k);
+                let vb = val.into_iter().map(|(c, v)| {
+                    (c, v.map(|r| {RecordCodec::from_record(r)}))
+                })
+                .collect::<Vec<_>>();
+                (kb, vb)
             })
             .collect::<Vec<_>>();
         let mut f = BufWriter::new(File::create(filename).unwrap());
@@ -201,5 +207,20 @@ impl Cache for MemoryStore {
 
     fn is_empty(&self) -> bool {
         self.memory.len() == 0
+    }
+}
+
+impl BytesCodec {
+    fn from_bytes(bytes: Bytes) -> Self {
+        Self(bytes.into())
+    }
+}
+
+impl RecordCodec {
+    fn from_record(record: Record) -> Self {
+        Self {
+            header: record.header,
+            data: BytesCodec::from_bytes(record.value)
+        }
     }
 }
