@@ -1,6 +1,6 @@
 use super::error::{CacheError, Result};
 use bytes::Bytes;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 /// Cache key type
 pub type KeyType = Bytes;

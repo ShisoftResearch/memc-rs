@@ -1,6 +1,6 @@
 use crate::cache::cache::{
-    impl_details::CacheImplDetails, Cache, CacheMetaData, CachePredicate,
-    KeyType, Record, RemoveIfResult, SetStatus,
+    impl_details::CacheImplDetails, Cache, CacheMetaData, CachePredicate, KeyType, Record,
+    RemoveIfResult, SetStatus,
 };
 use crate::cache::error::Result;
 use rand::rngs::SmallRng;
