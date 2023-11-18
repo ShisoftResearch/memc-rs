@@ -1,4 +1,4 @@
-use super::cli::parser::Backend;
+use super::cli::parser::Engine;
 use super::eviction_policy::EvictionPolicy;
 use super::random_policy::RandomPolicy;
 use crate::cache::cache::Cache;
@@ -11,15 +11,15 @@ use std::sync::Arc;
 pub struct MemcacheStoreConfig {
     policy: EvictionPolicy,
     memory_limit: u64,
-    backend: Backend
+    engine: Engine
 }
 
 impl MemcacheStoreConfig {
-    pub fn new(memory_limit: u64, backend: Backend) -> MemcacheStoreConfig {
+    pub fn new(memory_limit: u64, engine: Engine) -> MemcacheStoreConfig {
         MemcacheStoreConfig {
             policy: EvictionPolicy::None,
             memory_limit,
-            backend
+            engine
         }
     }
 }
@@ -48,15 +48,15 @@ impl MemcacheStoreBuilder {
 
     fn backend_from_config(config: &MemcacheStoreConfig, timer: Arc<dyn timer::Timer + Send + Sync>) -> Arc<dyn Cache + Send + Sync> {
         let cap = max(config.memory_limit * 1024 * 1024 / 1024, 8192) as usize;
-        match config.backend {
-            Backend::Lightning => Arc::new(MemoryStore::<LightningBackend>::new(timer, cap)),
-            Backend::DashMap => todo!(),
-            Backend::Cuckoo => todo!(),
-            Backend::Concach => todo!(),
-            Backend::Cht => todo!(),
-            Backend::SccHashMap => todo!(),
-            Backend::Contrie => todo!(),
-            Backend::Flurry => todo!(),
+        match config.engine {
+            Engine::Lightning => Arc::new(MemoryStore::<LightningBackend>::new(timer, cap)),
+            Engine::DashMap => todo!(),
+            Engine::Cuckoo => todo!(),
+            Engine::Concach => todo!(),
+            Engine::Cht => todo!(),
+            Engine::SccHashMap => todo!(),
+            Engine::Contrie => todo!(),
+            Engine::Flurry => todo!(),
         }
     }
 }

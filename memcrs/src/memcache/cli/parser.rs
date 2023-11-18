@@ -11,7 +11,7 @@ pub enum RuntimeType {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
-pub enum Backend {
+pub enum Engine {
     Lightning,
     DashMap,
     Cuckoo,
@@ -82,8 +82,8 @@ pub struct MemcrsArgs {
     ///  runtime type to use
     pub runtime_type: RuntimeType,
 
-    #[arg(short, long, value_name = "BACKEND", default_value_t = Backend::Lightning, value_enum)]
-    pub backend: Backend
+    #[arg(short, long, value_name = "ENGINE", default_value_t = Engine::Lightning, value_enum)]
+    pub engine: Engine
 }
 
 const PORT_RANGE: RangeInclusive<usize> = 1..=65535;
