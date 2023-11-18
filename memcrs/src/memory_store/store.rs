@@ -16,7 +16,9 @@ use parking_lot::Mutex;
 use serde_derive::{Deserialize, Serialize};
 
 use super::backends::StorageBackend;
+use super::backends::lightning::LightningBackend;
 type Recorder = PtrHashMap<KeyType, Arc<Mutex<Vec<(char, Option<Record>)>>>>;
+pub type DefaultMemoryStore = MemoryStore<LightningBackend>;
 
 #[derive(Serialize, Deserialize)]
 pub struct BytesCodec(Vec<u8>);

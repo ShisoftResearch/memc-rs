@@ -10,6 +10,18 @@ pub enum RuntimeType {
     MultiThread,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub enum Backend {
+    Lightning,
+    DashMap,
+    Cuckoo,
+    Concach,
+    Cht,
+    SccHashMap,
+    Contrie,
+    Flurry,
+}
+
 impl RuntimeType {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -69,6 +81,9 @@ pub struct MemcrsArgs {
     #[arg(short, long, value_name = "RUNTIME-TYPE", default_value_t = RuntimeType::CurrentThread, value_enum)]
     ///  runtime type to use
     pub runtime_type: RuntimeType,
+
+    #[arg(short, long, value_name = "BACKEND", default_value_t = Backend::Lightning, value_enum)]
+    pub backend: Backend
 }
 
 const PORT_RANGE: RangeInclusive<usize> = 1..=65535;
