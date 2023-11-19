@@ -15,8 +15,8 @@ use lightning::map::{Map, PtrHashMap};
 use parking_lot::Mutex;
 use serde_derive::{Deserialize, Serialize};
 
-use super::backends::StorageBackend;
 use super::backends::lightning::LightningBackend;
+use super::backends::StorageBackend;
 type Recorder = PtrHashMap<KeyType, Arc<Mutex<Vec<(char, Option<Record>)>>>>;
 pub type DefaultMemoryStore = MemoryStore<LightningBackend>;
 
@@ -32,7 +32,7 @@ pub struct RecordCodec {
 pub struct MemoryStore<M: StorageBackend> {
     memory: M,
     recorder: Recorder,
-    peripherals: Peripherals
+    peripherals: Peripherals,
 }
 
 pub struct Peripherals {
@@ -48,12 +48,12 @@ impl<M: StorageBackend> MemoryStore<M> {
             peripherals: Peripherals {
                 timer,
                 cas_id: AtomicU64::new(1),
-            }
+            },
         }
     }
 
     fn get_cas_id(&self) -> u64 {
-       self.peripherals.get_cas_id()
+        self.peripherals.get_cas_id()
     }
 
     fn push_record(&self, key: &KeyType, op: char, rec: Option<&Record>) {
@@ -186,4 +186,4 @@ impl Peripherals {
     pub fn timestamp(&self) -> u64 {
         self.timer.timestamp()
     }
-} 
+}

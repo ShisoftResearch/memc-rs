@@ -1,9 +1,12 @@
 use lightning::map::{Map, PtrHashMap};
 
-use crate::{cache::{
-    cache::{KeyType, Record, SetStatus},
-    error::CacheError,
-}, memory_store::store::Peripherals};
+use crate::{
+    cache::{
+        cache::{KeyType, Record, SetStatus},
+        error::CacheError,
+    },
+    memory_store::store::Peripherals,
+};
 
 use super::StorageBackend;
 
@@ -32,7 +35,7 @@ impl StorageBackend for LightningBackend {
         &self,
         key: crate::memcache::store::KeyType,
         mut record: crate::memcache::store::Record,
-        peripherals: &Peripherals
+        peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
         if record.header.cas > 0 {
             match self.0.lock(&key) {
@@ -70,7 +73,7 @@ impl StorageBackend for LightningBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         if header.cas == 0 {
-            return self.0.remove(&key).ok_or(CacheError::NotFound)
+            return self.0.remove(&key).ok_or(CacheError::NotFound);
         } else {
             match self.0.lock(&key) {
                 Some(record) => {
@@ -80,7 +83,7 @@ impl StorageBackend for LightningBackend {
                         return Err(CacheError::KeyExists);
                     }
                 }
-                None => Err(CacheError::NotFound)
+                None => Err(CacheError::NotFound),
             }
         }
     }

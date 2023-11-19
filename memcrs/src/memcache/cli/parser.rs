@@ -83,7 +83,7 @@ pub struct MemcrsArgs {
     pub runtime_type: RuntimeType,
 
     #[arg(short, long, value_name = "ENGINE", default_value_t = Engine::Lightning, value_enum)]
-    pub engine: Engine
+    pub engine: Engine,
 }
 
 const PORT_RANGE: RangeInclusive<usize> = 1..=65535;
