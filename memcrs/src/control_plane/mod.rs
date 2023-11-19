@@ -54,8 +54,9 @@ struct Svc {
     storage: Arc<dyn Cache + Send + Sync>,
 }
 
-fn mk_response(s: String) -> Result<Response<Full<Bytes>>, hyper::Error> {
-    Ok(Response::builder().body(Full::new(Bytes::from(s))).unwrap())
+fn mk_response<'a>(s: &'a str) -> Result<Response<Full<Bytes>>, hyper::Error> {
+    let res = Bytes::from(s.to_string());
+    Ok(Response::builder().body(Full::new(res)).unwrap())
 }
 
 impl Service<Request<IncomingBody>> for Svc {
@@ -73,9 +74,9 @@ impl Service<Request<IncomingBody>> for Svc {
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect::<HashMap<_, _>>();
         let res = match (method, path) {
-            (&Method::GET, "/") => mk_response(format!("Mmec benchmark control plan")),
-            (&Method::POST, "/start-record") => todo!(),
-            (&Method::POST, "/stop-record") => todo!(),
+            (&Method::GET, "/") => mk_response(&format!("Memc benchmark control plan")),
+            (&Method::POST, "/start-record") => self.start_record(),
+            (&Method::POST, "/stop-record") => self.stop_record(&query),
             (&Method::POST, "/play-record") => todo!(),
             (&Method::POST, "/play-and-benchmark") => todo!(),
             // Return the 404 Not Found for other routes, and don't increment counter.
@@ -86,7 +87,13 @@ impl Service<Request<IncomingBody>> for Svc {
 }
 
 impl Svc {
-    fn start_record(&self, query: &HashMap<String, String>) -> Result<Response<Full<Bytes>>, hyper::Error> {
-        unimplemented!()
+    fn start_record(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
+        // self.storage.record();
+        mk_response("ok")
+    }
+    fn stop_record(&self, query: &HashMap<String, String>) -> Result<Response<Full<Bytes>>, hyper::Error> {
+        let name = query.get("name").unwrap();
+        // self.storage.stop_record(name);
+        mk_response("ok")
     }
 }

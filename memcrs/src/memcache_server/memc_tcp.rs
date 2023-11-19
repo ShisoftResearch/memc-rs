@@ -1,6 +1,8 @@
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering::Relaxed;
 
 use tokio::io;
 use tokio::net::TcpListener;
@@ -17,7 +19,6 @@ use crate::memcache::store as storage;
 #[derive(Clone, Copy)]
 pub struct MemcacheServerConfig {
     timeout_secs: u32,
-    connection_limit: u32,
     item_memory_limit: u32,
     listen_backlog: u32,
 }
@@ -31,16 +32,15 @@ impl MemcacheServerConfig {
     ) -> Self {
         MemcacheServerConfig {
             timeout_secs,
-            connection_limit,
             item_memory_limit,
             listen_backlog,
         }
     }
 }
-#[derive(Clone)]
+
 pub struct MemcacheTcpServer {
     storage: Arc<storage::MemcStore>,
-    limit_connections: Arc<Semaphore>,
+    connection_counter: AtomicU64,
     config: MemcacheServerConfig,
 }
 
@@ -51,7 +51,7 @@ impl MemcacheTcpServer {
     ) -> MemcacheTcpServer {
         MemcacheTcpServer {
             storage: Arc::new(storage::MemcStore::new(store)),
-            limit_connections: Arc::new(Semaphore::new(config.connection_limit as usize)),
+            connection_counter: AtomicU64::new(0),
             config,
         }
     }
@@ -63,6 +63,7 @@ impl MemcacheTcpServer {
                 connection = listener.accept() => {
                     match connection {
                         Ok((socket, addr)) => {
+                            let conn_id = self.connection_counter.fetch_add(1, Relaxed);
                             let peer_addr = addr;
                             socket.set_nodelay(true)?;
                             socket.set_linger(None)?;
@@ -71,10 +72,8 @@ impl MemcacheTcpServer {
                                 socket,
                                 peer_addr,
                                 self.get_client_config(),
-                                Arc::clone(&self.limit_connections)
+                                conn_id
                             );
-
-                            self.limit_connections.acquire().await.unwrap().forget();
                             // Like with other small servers, we'll `spawn` this client to ensure it
                             // runs concurrently with all other clients. The `move` keyword is used
                             // here to move ownership of our store handle into the async closure.

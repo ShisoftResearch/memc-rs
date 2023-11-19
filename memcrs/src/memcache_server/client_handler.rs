@@ -24,12 +24,7 @@ pub struct Client {
     addr: SocketAddr,
     config: ClientConfig,
     handler: handler::BinaryHandler,
-    /// Max connection semaphore.
-    ///
-    /// When the handler is dropped, a permit is returned to this semaphore. If
-    /// the listener is waiting for connections to close, it will be notified of
-    /// the newly available permit and resume accepting connections.
-    limit_connections: Arc<Semaphore>,
+    connection_id: u64,
 }
 
 impl Client {
@@ -38,14 +33,14 @@ impl Client {
         socket: TcpStream,
         addr: SocketAddr,
         config: ClientConfig,
-        limit_connections: Arc<Semaphore>,
+        connection_id: u64
     ) -> Self {
         Client {
             stream: MemcacheBinaryConnection::new(socket, config.item_memory_limit),
             addr,
             config,
             handler: handler::BinaryHandler::new(store),
-            limit_connections,
+            connection_id
         }
     }
 
@@ -137,17 +132,7 @@ impl Client {
 
 impl Drop for Client {
     fn drop(&mut self) {
-        // Add a permit back to the semaphore.
-        //
-        // Doing so unblocks the listener if the max number of
-        // connections has been reached.
-        //
-        // This is done in a `Drop` implementation in order to guarantee that
-        // the permit is added even if the task handling the connection panics.
-        // If `add_permit` was called at the end of the `run` function and some
-        // bug causes a panic. The permit would never be returned to the
-        // semaphore.
-        self.limit_connections.add_permits(1);
+        
     }
 }
 
