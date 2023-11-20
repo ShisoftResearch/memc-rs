@@ -24,7 +24,7 @@ pub struct Client {
     addr: SocketAddr,
     config: ClientConfig,
     handler: handler::BinaryHandler,
-    recording: ConnectionRecorder
+    recording: ConnectionRecorder,
 }
 
 impl Client {
@@ -34,7 +34,7 @@ impl Client {
         addr: SocketAddr,
         config: ClientConfig,
         connection_id: u64,
-        master_recorder: &Arc<MasterRecorder>
+        master_recorder: &Arc<MasterRecorder>,
     ) -> Self {
         let enable_recording = master_recorder.is_enabled();
         Client {
@@ -42,7 +42,7 @@ impl Client {
             addr,
             config,
             handler: handler::BinaryHandler::new(store),
-            recording: ConnectionRecorder::new(connection_id, enable_recording, master_recorder)
+            recording: ConnectionRecorder::new(connection_id, enable_recording, master_recorder),
         }
     }
 
@@ -135,9 +135,7 @@ impl Client {
 }
 
 impl Drop for Client {
-    fn drop(&mut self) {
-        
-    }
+    fn drop(&mut self) {}
 }
 
 fn log_error(e: io::Error) {

@@ -1,5 +1,9 @@
-use std::{collections::HashMap, sync::{Arc, atomic::AtomicBool}, mem::{swap, replace}};
 use std::sync::atomic::Ordering::*;
+use std::{
+    collections::HashMap,
+    mem::{replace, swap},
+    sync::{atomic::AtomicBool, Arc},
+};
 
 use parking_lot::Mutex;
 
@@ -7,7 +11,7 @@ use crate::protocol::binary_codec::BinaryRequest;
 
 pub struct MasterRecorder {
     enabled: AtomicBool,
-    all_recordings: Mutex<HashMap<u64, Vec<BinaryRequest>>>
+    all_recordings: Mutex<HashMap<u64, Vec<BinaryRequest>>>,
 }
 
 pub struct ConnectionRecorder {
@@ -23,7 +27,7 @@ impl ConnectionRecorder {
             operations: Mutex::new(vec![]),
             master: master.clone(),
             connection_id,
-            enabled
+            enabled,
         }
     }
 
@@ -37,7 +41,10 @@ impl ConnectionRecorder {
         if self.enabled {
             let mut self_records = self.operations.lock();
             let records = replace(&mut *self_records, vec![]);
-            self.master.all_recordings.lock().insert(self.connection_id, records);
+            self.master
+                .all_recordings
+                .lock()
+                .insert(self.connection_id, records);
         }
     }
 }
@@ -46,7 +53,7 @@ impl MasterRecorder {
     pub fn new() -> Self {
         Self {
             enabled: AtomicBool::new(false),
-            all_recordings: Mutex::new(HashMap::new())
+            all_recordings: Mutex::new(HashMap::new()),
         }
     }
 

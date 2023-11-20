@@ -1,8 +1,8 @@
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::net::ToSocketAddrs;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, AtomicBool};
 use std::sync::atomic::Ordering::Relaxed;
+use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::Arc;
 
 use tokio::io;
 use tokio::net::TcpListener;
@@ -24,11 +24,7 @@ pub struct MemcacheServerConfig {
 }
 
 impl MemcacheServerConfig {
-    pub fn new(
-        timeout_secs: u32,
-        item_memory_limit: u32,
-        listen_backlog: u32,
-    ) -> Self {
+    pub fn new(timeout_secs: u32, item_memory_limit: u32, listen_backlog: u32) -> Self {
         MemcacheServerConfig {
             timeout_secs,
             item_memory_limit,
@@ -48,7 +44,7 @@ impl MemcacheTcpServer {
     pub fn new(
         config: MemcacheServerConfig,
         store: Arc<dyn Cache + Send + Sync>,
-        recorder: &Arc<MasterRecorder>
+        recorder: &Arc<MasterRecorder>,
     ) -> MemcacheTcpServer {
         MemcacheTcpServer {
             storage: Arc::new(storage::MemcStore::new(store)),

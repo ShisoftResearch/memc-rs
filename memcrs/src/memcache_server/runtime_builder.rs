@@ -46,13 +46,13 @@ fn create_current_thread_runtime() -> tokio::runtime::Runtime {
 fn create_current_thread_server(
     config: MemcrsArgs,
     store: Arc<dyn Cache + Send + Sync>,
-    recorder: &Arc<MasterRecorder>
+    recorder: &Arc<MasterRecorder>,
 ) -> tokio::runtime::Runtime {
     let addr = SocketAddr::new(config.listen_address, config.port);
     let memc_config = memcache_server::memc_tcp::MemcacheServerConfig::new(
         60,
         config.item_size_limit.get_bytes() as u32,
-        config.backlog_limit
+        config.backlog_limit,
     );
 
     let core_ids = core_affinity::get_core_ids().unwrap();
@@ -66,8 +66,11 @@ fn create_current_thread_server(
             let res = core_affinity::set_for_current(core_id);
             let create_runtime = || {
                 let child_runtime = create_current_thread_runtime();
-                let mut tcp_server =
-                    memcache_server::memc_tcp::MemcacheTcpServer::new(memc_config, store_rc, &recorder);
+                let mut tcp_server = memcache_server::memc_tcp::MemcacheTcpServer::new(
+                    memc_config,
+                    store_rc,
+                    &recorder,
+                );
                 child_runtime.block_on(tcp_server.run(addr)).unwrap()
             };
             if res {
@@ -89,7 +92,7 @@ fn create_current_thread_server(
 fn create_threadpool_server(
     config: MemcrsArgs,
     store: Arc<dyn Cache + Send + Sync>,
-    recorder: &Arc<MasterRecorder>
+    recorder: &Arc<MasterRecorder>,
 ) -> tokio::runtime::Runtime {
     let addr = SocketAddr::new(config.listen_address, config.port);
     let memc_config = memcache_server::memc_tcp::MemcacheServerConfig::new(
@@ -99,7 +102,8 @@ fn create_threadpool_server(
     );
     let runtime = create_multi_thread_runtime(config.threads);
     let store_rc = Arc::clone(&store);
-    let mut tcp_server = memcache_server::memc_tcp::MemcacheTcpServer::new(memc_config, store_rc, recorder);
+    let mut tcp_server =
+        memcache_server::memc_tcp::MemcacheTcpServer::new(memc_config, store_rc, recorder);
     runtime.spawn(async move { tcp_server.run(addr).await });
     runtime
 }
@@ -115,7 +119,9 @@ pub fn create_memcrs_server(
     let recorder = Arc::new(MasterRecorder::new());
     control_plane::start_service(&recorder);
     match config.runtime_type {
-        RuntimeType::CurrentThread => create_current_thread_server(config, memcache_store, &recorder),
+        RuntimeType::CurrentThread => {
+            create_current_thread_server(config, memcache_store, &recorder)
+        }
         RuntimeType::MultiThread => create_threadpool_server(config, memcache_store, &recorder),
     }
 }
