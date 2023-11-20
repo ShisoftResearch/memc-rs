@@ -4,11 +4,12 @@ use crate::cache::error::CacheError;
 use crate::protocol::binary;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use num_traits::FromPrimitive;
+use serde_derive::{Serialize, Deserialize};
 use std::io::{Error, ErrorKind};
 use tokio_util::codec::{Decoder, Encoder};
 
 /// Client request
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BinaryRequest {
     Delete(binary::DeleteRequest),
     DeleteQuiet(binary::DeleteRequest),

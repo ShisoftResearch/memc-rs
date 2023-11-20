@@ -1,3 +1,4 @@
+use std::fs::File;
 use std::sync::atomic::Ordering::*;
 use std::{
     collections::HashMap,
@@ -65,7 +66,16 @@ impl MasterRecorder {
         self.enabled.load(Relaxed)
     }
 
-    pub fn dump(&self, name: &str) {
-        todo!()
+    pub fn dump(&self, name: &str) -> bincode::Result<u32>  {
+        let mut all_recordings = self.all_recordings.lock();
+        let conns = all_recordings.len();
+        for (conn_id, reqs) in all_recordings.iter() {
+            let filename = format!("{}-{}.bin", name, conn_id);
+            let mut f = File::create(filename).unwrap();
+            bincode::serialize_into(&mut f, reqs)?;
+        }
+        all_recordings.clear();
+        self.enabled.store(false, Relaxed);
+        Ok(conns as u32 )
     }
 }

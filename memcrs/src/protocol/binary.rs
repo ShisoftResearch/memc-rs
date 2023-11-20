@@ -138,7 +138,7 @@ pub struct ErrorResponse {
     pub error: &'static str,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetRequest {
     pub(crate) header: RequestHeader,
     pub(crate) key: Bytes,
@@ -163,7 +163,7 @@ pub type GetQuietlyResponse = GetResponse;
 pub type GetKeyResponse = GetResponse;
 pub type GetKeyQuietlyResponse = GetResponse;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SetRequest {
     pub(crate) header: RequestHeader,
     pub(crate) flags: u32,
@@ -175,7 +175,7 @@ pub struct SetRequest {
 pub type AddRequest = SetRequest;
 pub type ReplaceRequest = SetRequest;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppendRequest {
     pub(crate) header: RequestHeader,
     pub(crate) key: Bytes,
@@ -190,7 +190,7 @@ pub type SetResponse = Response;
 pub type AddResponse = Response;
 pub type ReplaceResponse = Response;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IncrementRequest {
     pub(crate) header: RequestHeader,
     pub(crate) delta: u64,

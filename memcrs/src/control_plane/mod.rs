@@ -102,8 +102,10 @@ impl Svc {
     ) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
-        self.recorder.dump(name);
-        mk_response("ok")
+        match self.recorder.dump(name) {
+            Ok(conns) => mk_response(&format!("{}", conns)),
+            Err(e) => mk_response(&e.to_string())
+        }
     }
 }
 
