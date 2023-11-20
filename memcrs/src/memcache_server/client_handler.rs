@@ -3,13 +3,13 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::io;
 use tokio::net::TcpStream;
-use tokio::sync::Semaphore;
 use tokio::time::timeout;
 use tracing::{debug, error};
 
 //use tracing_attributes::instrument;
 
 use super::handler;
+use super::recorder::{ConnectionRecorder, MasterRecorder};
 use crate::memcache::store as storage;
 use crate::protocol::binary_codec::{BinaryRequest, BinaryResponse};
 use crate::protocol::binary_connection::MemcacheBinaryConnection;
@@ -24,7 +24,7 @@ pub struct Client {
     addr: SocketAddr,
     config: ClientConfig,
     handler: handler::BinaryHandler,
-    connection_id: u64,
+    recording: ConnectionRecorder
 }
 
 impl Client {
@@ -33,14 +33,16 @@ impl Client {
         socket: TcpStream,
         addr: SocketAddr,
         config: ClientConfig,
-        connection_id: u64
+        connection_id: u64,
+        master_recorder: &Arc<MasterRecorder>
     ) -> Self {
+        let enable_recording = master_recorder.is_enabled();
         Client {
             stream: MemcacheBinaryConnection::new(socket, config.item_memory_limit),
             addr,
             config,
             handler: handler::BinaryHandler::new(store),
-            connection_id
+            recording: ConnectionRecorder::new(connection_id, enable_recording, master_recorder)
         }
     }
 
@@ -60,6 +62,7 @@ impl Client {
                 Ok(req_or_none) => {
                     let client_close = self.handle_frame(req_or_none).await;
                     if client_close {
+                        self.recording.stop();
                         return;
                     }
                 }
@@ -104,6 +107,7 @@ impl Client {
             return true;
         }
 
+        self.recording.push_record(&request); // Record request and then replay
         let resp = self.handler.handle_request(request);
         match resp {
             Some(response) => {

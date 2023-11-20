@@ -8,7 +8,7 @@ use std::io::{Error, ErrorKind};
 use tokio_util::codec::{Decoder, Encoder};
 
 /// Client request
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BinaryRequest {
     Delete(binary::DeleteRequest),
     DeleteQuiet(binary::DeleteRequest),

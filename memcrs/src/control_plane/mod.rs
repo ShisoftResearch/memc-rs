@@ -13,14 +13,14 @@ use http_body_util::{combinators::BoxBody, BodyExt};
 use hyper::body::Frame;
 use hyper::server::conn::http1;
 use hyper::{body::Incoming as IncomingBody, Response};
-use hyper::{Method, Request, StatusCode};
+use hyper::{Method, Request};
 use hyper_util::rt::TokioIo;
 use url::Url;
 
-use crate::cache::cache::Cache;
+use crate::memcache_server::recorder::MasterRecorder;
 
-async fn start(
-    storage: &Arc<dyn Cache + Send + Sync>,
+pub async fn start(
+    recorder: &Arc<MasterRecorder>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
 
@@ -29,7 +29,7 @@ async fn start(
 
     // We start a loop to continuously accept incoming connections
     loop {
-        let storage = storage.clone();
+        let recorder = recorder.clone();
         let (stream, _) = listener.accept().await?;
 
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
@@ -41,7 +41,7 @@ async fn start(
             // Finally, we bind the incoming connection to our `hello` service
             if let Err(err) = http1::Builder::new()
                 // `service_fn` converts our function in a `Service`
-                .serve_connection(io, Svc { storage })
+                .serve_connection(io, Svc { recorder })
                 .await
             {
                 println!("Error serving connection: {:?}", err);
@@ -51,7 +51,7 @@ async fn start(
 }
 
 struct Svc {
-    storage: Arc<dyn Cache + Send + Sync>,
+    recorder: Arc<MasterRecorder>
 }
 
 fn mk_response<'a>(s: &'a str) -> Result<Response<Full<Bytes>>, hyper::Error> {
@@ -88,12 +88,12 @@ impl Service<Request<IncomingBody>> for Svc {
 
 impl Svc {
     fn start_record(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
-        // self.storage.record();
+        self.recorder.start();
         mk_response("ok")
     }
     fn stop_record(&self, query: &HashMap<String, String>) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let name = query.get("name").unwrap();
-        // self.storage.stop_record(name);
+        self.recorder.dump(name);
         mk_response("ok")
     }
 }

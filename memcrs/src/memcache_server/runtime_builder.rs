@@ -47,9 +47,8 @@ fn create_current_thread_server(
     let addr = SocketAddr::new(config.listen_address, config.port);
     let memc_config = memcache_server::memc_tcp::MemcacheServerConfig::new(
         60,
-        config.connection_limit,
         config.item_size_limit.get_bytes() as u32,
-        config.backlog_limit,
+        config.backlog_limit
     );
 
     let core_ids = core_affinity::get_core_ids().unwrap();
@@ -90,7 +89,6 @@ fn create_threadpool_server(
     let addr = SocketAddr::new(config.listen_address, config.port);
     let memc_config = memcache_server::memc_tcp::MemcacheServerConfig::new(
         60,
-        config.connection_limit,
         config.item_size_limit.get_bytes() as u32,
         config.backlog_limit,
     );

@@ -12,7 +12,7 @@ path = "src/lib.rs"
 
 [dependencies]
 byte-unit = "4.0.19"
-bytes = "1.4.0"
+bytes = { version = "1", features = ["serde"] }
 clap = { version = "4.3.23", features = ["derive", "cargo"] }
 core_affinity = "0.8.1"
 lightning-containers = { git = "ssh://git@192.168.10.134/shisoft-x/Lightning.git", branch = "develop" }

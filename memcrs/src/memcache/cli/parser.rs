@@ -50,10 +50,6 @@ pub struct MemcrsArgs {
     /// TCP port to listen on
     pub port: u16,
 
-    #[arg(short, long, value_name = "CONNECTION-LIMIT", default_value_t = CONNECTION_LIMIT)]
-    /// max simultaneous connections
-    pub connection_limit: u32,
-
     #[arg(short, long, value_name = "LISTEN-BACKLOG", default_value_t = LISTEN_BACKLOG)]
     /// set the backlog queue limit
     pub backlog_limit: u32,

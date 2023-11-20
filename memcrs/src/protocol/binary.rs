@@ -112,7 +112,7 @@ impl ResponseHeader {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Request {
     pub(crate) header: RequestHeader,
 }
@@ -138,7 +138,7 @@ pub struct ErrorResponse {
     pub error: &'static str,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GetRequest {
     pub(crate) header: RequestHeader,
     pub(crate) key: Bytes,
@@ -175,7 +175,7 @@ pub struct SetRequest {
 pub type AddRequest = SetRequest;
 pub type ReplaceRequest = SetRequest;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AppendRequest {
     pub(crate) header: RequestHeader,
     pub(crate) key: Bytes,
@@ -190,7 +190,7 @@ pub type SetResponse = Response;
 pub type AddResponse = Response;
 pub type ReplaceResponse = Response;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IncrementRequest {
     pub(crate) header: RequestHeader,
     pub(crate) delta: u64,
@@ -214,7 +214,7 @@ pub struct TouchRequest {
 
 pub type TouchResponse = Response;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FlushRequest {
     pub(crate) header: RequestHeader,
     pub(crate) expiration: u32,

@@ -1,18 +1,18 @@
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::net::ToSocketAddrs;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU64, AtomicBool};
 use std::sync::atomic::Ordering::Relaxed;
 
 use tokio::io;
 use tokio::net::TcpListener;
-use tokio::sync::Semaphore;
 
 use tracing::{debug, error};
 
 //use tracing_attributes::instrument;
 
 use super::client_handler;
+use super::recorder::MasterRecorder;
 use crate::cache::cache::Cache;
 use crate::memcache::store as storage;
 
@@ -26,7 +26,6 @@ pub struct MemcacheServerConfig {
 impl MemcacheServerConfig {
     pub fn new(
         timeout_secs: u32,
-        connection_limit: u32,
         item_memory_limit: u32,
         listen_backlog: u32,
     ) -> Self {
@@ -41,6 +40,7 @@ impl MemcacheServerConfig {
 pub struct MemcacheTcpServer {
     storage: Arc<storage::MemcStore>,
     connection_counter: AtomicU64,
+    master_recorder: Arc<MasterRecorder>,
     config: MemcacheServerConfig,
 }
 
@@ -52,6 +52,7 @@ impl MemcacheTcpServer {
         MemcacheTcpServer {
             storage: Arc::new(storage::MemcStore::new(store)),
             connection_counter: AtomicU64::new(0),
+            master_recorder: Arc::new(MasterRecorder::new()),
             config,
         }
     }
@@ -63,7 +64,6 @@ impl MemcacheTcpServer {
                 connection = listener.accept() => {
                     match connection {
                         Ok((socket, addr)) => {
-                            let conn_id = self.connection_counter.fetch_add(1, Relaxed);
                             let peer_addr = addr;
                             socket.set_nodelay(true)?;
                             socket.set_linger(None)?;
@@ -72,7 +72,8 @@ impl MemcacheTcpServer {
                                 socket,
                                 peer_addr,
                                 self.get_client_config(),
-                                conn_id
+                                self.connection_counter.fetch_add(1, Relaxed),
+                                &self.master_recorder
                             );
                             // Like with other small servers, we'll `spawn` this client to ensure it
                             // runs concurrently with all other clients. The `move` keyword is used

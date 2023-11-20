@@ -43,7 +43,6 @@ fn main() {
 
     info!("Listen address: {}", cli_config.listen_address.to_string());
     info!("Listen port: {}", cli_config.port);
-    info!("Connection limit: {}", cli_config.connection_limit);
     info!("Number of threads: {}", cli_config.threads);
     info!("Runtime type: {}", cli_config.runtime_type.as_str());
     info!(
