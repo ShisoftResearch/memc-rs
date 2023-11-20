@@ -33,7 +33,6 @@ impl RuntimeType {
 
 const DEFAULT_PORT: u16 = 11211;
 const DEFAULT_ADDRESS: &str = "127.0.0.1";
-const CONNECTION_LIMIT: u32 = 1024;
 const LISTEN_BACKLOG: u32 = 1024;
 const MEMORY_LIMIT: &str = "64MiB";
 const MAX_ITEM_SIZE: &str = "1MiB";

@@ -48,11 +48,12 @@ impl MemcacheTcpServer {
     pub fn new(
         config: MemcacheServerConfig,
         store: Arc<dyn Cache + Send + Sync>,
+        recorder: &Arc<MasterRecorder>
     ) -> MemcacheTcpServer {
         MemcacheTcpServer {
             storage: Arc::new(storage::MemcStore::new(store)),
             connection_counter: AtomicU64::new(0),
-            master_recorder: Arc::new(MasterRecorder::new()),
+            master_recorder: recorder.clone(),
             config,
         }
     }

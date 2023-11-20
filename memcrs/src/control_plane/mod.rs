@@ -9,8 +9,6 @@ use http_body_util::Full;
 use hyper::service::Service;
 use tokio::net::TcpListener;
 
-use http_body_util::{combinators::BoxBody, BodyExt};
-use hyper::body::Frame;
 use hyper::server::conn::http1;
 use hyper::{body::Incoming as IncomingBody, Response};
 use hyper::{Method, Request};
@@ -18,6 +16,18 @@ use hyper_util::rt::TokioIo;
 use url::Url;
 
 use crate::memcache_server::recorder::MasterRecorder;
+
+pub fn start_service(recorder: &Arc<MasterRecorder>) {
+    let recorder = recorder.clone();
+    std::thread::spawn(move || {
+        let rt =tokio::runtime::Builder::new_current_thread() 
+            .thread_name("Recorder")
+            .enable_all()
+            .build()
+            .unwrap();
+        rt.block_on(start(&recorder))
+    });
+}
 
 pub async fn start(
     recorder: &Arc<MasterRecorder>,
