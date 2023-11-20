@@ -13,7 +13,6 @@ use tokio::runtime::Builder;
 
 use crate::memcache::cli::parser::MemcrsArgs;
 
-use super::recorder;
 use super::recorder::MasterRecorder;
 
 fn get_worker_thread_name() -> String {
