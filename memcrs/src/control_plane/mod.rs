@@ -103,7 +103,8 @@ impl Svc {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
         match self.recorder.dump(name) {
-            Ok(conns) => mk_response(&format!("{}/{}", conns, self.recorder.max_conn_id())),            Err(e) => mk_response(&e.to_string())
+            Ok(conns) => mk_response(&format!("{}/{}", conns, self.recorder.max_conn_id())),
+            Err(e) => mk_response(&e.to_string()),
         }
     }
 }

@@ -3,7 +3,8 @@ use super::eviction_policy::EvictionPolicy;
 use super::random_policy::RandomPolicy;
 use crate::cache::cache::Cache;
 use crate::memory_store::backends::lightning::LightningBackend;
-use crate::memory_store::store::{DefaultMemoryStore, MemoryStore};
+use crate::memory_store::backends::dashmap::DashMapBackend;
+use crate::memory_store::store::MemoryStore;
 use crate::server::timer;
 use std::cmp::max;
 use std::sync::Arc;
@@ -54,7 +55,7 @@ impl MemcacheStoreBuilder {
         let cap = max(esti_cap, 8192) as usize;
         match config.engine {
             Engine::Lightning => Arc::new(MemoryStore::<LightningBackend>::new(timer, cap)),
-            Engine::DashMap => todo!(),
+            Engine::DashMap => Arc::new(MemoryStore::<DashMapBackend>::new(timer, cap)),
             Engine::Cuckoo => todo!(),
             Engine::Concach => todo!(),
             Engine::Cht => todo!(),

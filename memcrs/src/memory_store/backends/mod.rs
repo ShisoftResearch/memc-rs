@@ -4,6 +4,7 @@ use crate::memcache::store::{KeyType, Record};
 
 use super::store::Peripherals;
 
+pub mod dashmap;
 pub mod lightning;
 
 pub trait StorageBackend {

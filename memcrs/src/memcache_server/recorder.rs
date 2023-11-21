@@ -52,9 +52,15 @@ impl ConnectionRecorder {
             let connection_id = self.connection_id;
             assert!(!all_recordings.contains_key(&connection_id));
             all_recordings.insert(self.connection_id, records);
-            info!("Moving recording for connection {} after closing", self.connection_id);
+            info!(
+                "Moving recording for connection {} after closing",
+                self.connection_id
+            );
         } else {
-            debug!("Nothing get recorded for connection #{}", self.connection_id);
+            debug!(
+                "Nothing get recorded for connection #{}",
+                self.connection_id
+            );
         }
     }
 }
@@ -84,7 +90,7 @@ impl MasterRecorder {
         self.connection_counter.load(Acquire)
     }
 
-    pub fn dump(&self, name: &str) -> bincode::Result<u32>  {
+    pub fn dump(&self, name: &str) -> bincode::Result<u32> {
         info!("Start dumping recording for '{}'", name);
         let mut all_recordings = self.all_recordings.lock();
         let conns = all_recordings.len();
@@ -92,10 +98,13 @@ impl MasterRecorder {
             let filename = format!("{}-{}.bin", name, conn_id);
             let mut f = File::create(filename).unwrap();
             bincode::serialize_into(&mut f, reqs)?;
-            info!("Dump recording '{}' for connection {} completed", name, conn_id);
+            info!(
+                "Dump recording '{}' for connection {} completed",
+                name, conn_id
+            );
         }
         all_recordings.clear();
         self.enabled.store(false, Relaxed);
-        Ok(conns as u32 )
+        Ok(conns as u32)
     }
 }
