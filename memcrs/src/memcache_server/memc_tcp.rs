@@ -1,7 +1,5 @@
 use socket2::{Domain, SockAddr, Socket, Type};
 use std::net::ToSocketAddrs;
-use std::sync::atomic::Ordering::Relaxed;
-use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 
 use tokio::io;
