@@ -35,7 +35,6 @@ impl MemcacheServerConfig {
 
 pub struct MemcacheTcpServer {
     storage: Arc<storage::MemcStore>,
-    connection_counter: AtomicU64,
     master_recorder: Arc<MasterRecorder>,
     config: MemcacheServerConfig,
 }
@@ -48,7 +47,6 @@ impl MemcacheTcpServer {
     ) -> MemcacheTcpServer {
         MemcacheTcpServer {
             storage: Arc::new(storage::MemcStore::new(store)),
-            connection_counter: AtomicU64::new(0),
             master_recorder: recorder.clone(),
             config,
         }
@@ -69,7 +67,6 @@ impl MemcacheTcpServer {
                                 socket,
                                 peer_addr,
                                 self.get_client_config(),
-                                self.connection_counter.fetch_add(1, Relaxed),
                                 &self.master_recorder
                             );
                             // Like with other small servers, we'll `spawn` this client to ensure it

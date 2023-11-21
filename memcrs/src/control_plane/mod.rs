@@ -94,7 +94,7 @@ impl Service<Request<IncomingBody>> for Svc {
 impl Svc {
     fn start_record(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
         self.recorder.start();
-        mk_response("ok")
+        mk_response(&format!("{}", self.recorder.max_conn_id()))
     }
     fn stop_record(
         &self,
@@ -103,8 +103,7 @@ impl Svc {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
         match self.recorder.dump(name) {
-            Ok(conns) => mk_response(&format!("{}", conns)),
-            Err(e) => mk_response(&e.to_string())
+            Ok(conns) => mk_response(&format!("{}/{}", conns, self.recorder.max_conn_id())),            Err(e) => mk_response(&e.to_string())
         }
     }
 }

@@ -33,10 +33,10 @@ impl Client {
         socket: TcpStream,
         addr: SocketAddr,
         config: ClientConfig,
-        connection_id: u64,
         master_recorder: &Arc<MasterRecorder>,
     ) -> Self {
         let enable_recording = master_recorder.is_enabled();
+        let connection_id = master_recorder.incr_conn_id();
         Client {
             stream: MemcacheBinaryConnection::new(socket, config.item_memory_limit),
             addr,
@@ -62,7 +62,6 @@ impl Client {
                 Ok(req_or_none) => {
                     let client_close = self.handle_frame(req_or_none).await;
                     if client_close {
-                        self.recording.stop();
                         return;
                     }
                 }
@@ -85,6 +84,7 @@ impl Client {
                     None => {
                         // The connection will be closed at this point as `lines.next()` has returned `None`.
                         debug!("Connection closed: {}", self.addr);
+                        self.recording.stop();
                         true
                     }
                 }

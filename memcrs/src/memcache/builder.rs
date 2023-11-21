@@ -50,7 +50,8 @@ impl MemcacheStoreBuilder {
         config: &MemcacheStoreConfig,
         timer: Arc<dyn timer::Timer + Send + Sync>,
     ) -> Arc<dyn Cache + Send + Sync> {
-        let cap = max(config.memory_limit * 1024 * 1024 / 1024, 8192) as usize;
+        let esti_cap = config.memory_limit / 1024;
+        let cap = max(esti_cap, 8192) as usize;
         match config.engine {
             Engine::Lightning => Arc::new(MemoryStore::<LightningBackend>::new(timer, cap)),
             Engine::DashMap => todo!(),
