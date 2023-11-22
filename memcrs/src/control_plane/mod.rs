@@ -17,6 +17,9 @@ use url::{form_urlencoded, Url};
 
 use crate::memcache_server::recorder::MasterRecorder;
 
+mod playback_ctl;
+mod runner;
+
 pub fn start_service(recorder: &Arc<MasterRecorder>) {
     let recorder = recorder.clone();
     std::thread::spawn(move || {
@@ -84,6 +87,7 @@ impl Service<Request<IncomingBody>> for Svc {
             (&Method::POST, "/stop-record") => self.stop_record(&req),
             (&Method::POST, "/play-record") => todo!(),
             (&Method::POST, "/play-and-benchmark") => todo!(),
+            (&Method::GET, "/playback-status") => todo!(),
             // Return the 404 Not Found for other routes, and don't increment counter.
             _ => return Box::pin(async { mk_response("oh no! not found".into()) }),
         };

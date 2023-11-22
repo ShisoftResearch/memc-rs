@@ -6,8 +6,8 @@ use crate::{
     },
     memory_store::store::Peripherals,
 };
-use dashmap::DashMap;
 use dashmap::mapref::multiple::RefMulti;
+use dashmap::DashMap;
 
 pub struct DashMapBackend(DashMap<KeyType, Record>);
 
