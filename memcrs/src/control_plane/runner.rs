@@ -1,14 +1,19 @@
-use crate::{protocol::binary_codec::BinaryRequest, memcache::store::{self, MemcStore}, memcache_server::handler::BinaryHandler};
+use crate::{
+    memcache::store::{self, MemcStore},
+    memcache_server::handler::BinaryHandler,
+    protocol::binary_codec::BinaryRequest,
+};
 use std::{
     env,
     fs::{self, File},
-    thread, sync::Arc,
+    sync::Arc,
+    thread,
 };
-use tracing_subscriber::fmt::format;
 
 use super::playback_ctl::Playback;
+use minstant::Instant;
 
-pub fn run_records(ctl: &Arc<Playback>, name: &String, benchmarking: bool, store: &Arc<MemcStore>) {
+pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
     // Asynchrnozed running recording in a seperate thread
     let ctl = ctl.clone();
     let store = store.clone();
@@ -23,11 +28,34 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, benchmarking: bool, store
                 thread::Builder::new()
                     .name(format!("Rec-conn-{}", conn_id))
                     .spawn(move || {
+                        let mut time_vec = vec![0; data.len()];
+                        let mut time_coli_vec = vec![0; data.len()];
+                        let mut idx = 0;
+                        let data_len = data.len();
+                        let start_time = tsc();
                         for req in data {
                             handler.handle_request(req);
+                            time_vec[idx] = tsc();
+                            idx = idx + 1;
                         }
+                        let end_time = tsc();
+                        for i in 0..data_len {
+                            time_coli_vec[i] = tsc();
+                        }
+                        let coli_time = tsc() - end_time;
+                        let bench_time = end_time - start_time - coli_time;
+                        let mut req_time = vec![time_vec[0] - start_time];
+                        for i in 1..time_vec.len() {
+                            req_time[i] = time_vec[i] - time_vec[i - 1];
+                        }
+                        (start_time, end_time, bench_time, req_time)
                     })
+                    .unwrap()
             })
+            .collect::<Vec<_>>();
+        let all_results = all_threads
+            .into_iter()
+            .map(|t| t.join().unwrap())
             .collect::<Vec<_>>();
         ctl.stop();
     });
@@ -59,4 +87,14 @@ fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {
         }
     }
     return res;
+}
+
+#[inline]
+fn tsc() -> u64 {
+    #[cfg(target_arch = "x86")]
+    use core::arch::x86::_rdtsc;
+    #[cfg(target_arch = "x86_64")]
+    use core::arch::x86_64::_rdtsc;
+
+    unsafe { _rdtsc() }
 }
