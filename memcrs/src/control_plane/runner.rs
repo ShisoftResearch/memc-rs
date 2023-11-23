@@ -32,6 +32,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                         let mut time_coli_vec = vec![0; data.len()];
                         let mut idx = 0;
                         let data_len = data.len();
+                        let start_clock = Instant::now();
                         let start_time = tsc();
                         for req in data {
                             handler.handle_request(req);
@@ -39,16 +40,20 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                             idx = idx + 1;
                         }
                         let end_time = tsc();
+                        let end_clock = Instant::now();
+                        let coil_start_time = tsc();
                         for i in 0..data_len {
                             time_coli_vec[i] = tsc();
                         }
-                        let coli_time = tsc() - end_time;
+                        let coli_time = tsc() - coil_start_time;
+                        let coil_clock_time = Instant::now() - end_clock;
                         let bench_time = end_time - start_time - coli_time;
+                        let bench_clock_time = end_clock - start_clock - coil_clock_time;
                         let mut req_time = vec![time_vec[0] - start_time];
                         for i in 1..time_vec.len() {
                             req_time[i] = time_vec[i] - time_vec[i - 1];
                         }
-                        (start_time, end_time, bench_time, req_time)
+                        (start_time, end_time, bench_time, bench_clock_time, req_time)
                     })
                     .unwrap()
             })
