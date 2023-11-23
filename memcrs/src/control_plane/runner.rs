@@ -31,7 +31,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                         let mut time_vec = vec![0; data.len()];
                         let mut time_coli_vec = vec![0; data.len()];
                         let mut idx = 0;
-                        let data_len = data.len();
+                        let ops = data.len();
                         let start_clock = Instant::now();
                         let start_time = tsc();
                         for req in data {
@@ -42,7 +42,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                         let end_time = tsc();
                         let end_clock = Instant::now();
                         let coil_start_time = tsc();
-                        for i in 0..data_len {
+                        for i in 0..ops {
                             time_coli_vec[i] = tsc();
                         }
                         let coli_time = tsc() - coil_start_time;
@@ -53,7 +53,8 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                         for i in 1..time_vec.len() {
                             req_time[i] = time_vec[i] - time_vec[i - 1];
                         }
-                        (start_time, end_time, bench_time, bench_clock_time, req_time)
+                        let latency_precentiles = calculate_percentiles(&req_time);
+                        (start_time, end_time, bench_time, bench_clock_time, ops, req_time, latency_precentiles)
                     })
                     .unwrap()
             })
@@ -102,4 +103,25 @@ fn tsc() -> u64 {
     use core::arch::x86_64::_rdtsc;
 
     unsafe { _rdtsc() }
+}
+
+fn calculate_percentiles(latencies: &Vec<u64>) -> (u64, u64, u64, u64) {
+    // Sort the latencies
+    let mut latencies = latencies.clone();
+    latencies.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    // Helper function to calculate a percentile
+    fn percentile(latencies: &[u64], p: f64) -> u64 {
+        let len = latencies.len() as f64;
+        let index = (p as f64 / 100.0 * len).ceil() as usize - 1; // Adjust for zero-based index
+        latencies[index.min(latencies.len() - 1)] // Handle edge case
+    }
+
+    // Calculate percentiles
+    let c90 = percentile(&latencies, 90.0);
+    let c99 = percentile(&latencies, 99.0);
+    let c99_9 = percentile(&latencies, 99.9);
+    let c99_99 = percentile(&latencies, 99.99);
+
+    (c90, c99, c99_9, c99_99)
 }
