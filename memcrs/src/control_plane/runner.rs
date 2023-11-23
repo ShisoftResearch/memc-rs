@@ -28,10 +28,10 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                 thread::Builder::new()
                     .name(format!("Rec-conn-{}", conn_id))
                     .spawn(move || {
-                        let mut time_vec = vec![0; data.len()];
-                        let mut time_coli_vec = vec![0; data.len()];
-                        let mut idx = 0;
                         let ops = data.len();
+                        let mut time_vec = vec![0; ops];
+                        let mut time_coli_vec = vec![0; ops];
+                        let mut idx = 0;
                         let start_clock = Instant::now();
                         let start_time = tsc();
                         for req in data {
