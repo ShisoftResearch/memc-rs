@@ -10,7 +10,7 @@ use std::{
     thread,
 };
 
-use super::playback_ctl::Playback;
+use super::playback_ctl::{Playback, PlaybackReport};
 use minstant::Instant;
 
 pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
@@ -49,12 +49,13 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                         let coil_clock_time = Instant::now() - end_clock;
                         let bench_time = end_time - start_time - coli_time;
                         let bench_clock_time = end_clock - start_clock - coil_clock_time;
-                        let mut req_time = vec![time_vec[0] - start_time];
+                        let mut req_time = vec![0; ops];
+                        req_time[0] = time_vec[0] - start_time;
                         for i in 1..time_vec.len() {
                             req_time[i] = time_vec[i] - time_vec[i - 1];
                         }
-                        let latency_precentiles = calculate_percentiles(&req_time);
-                        (start_time, end_time, bench_time, bench_clock_time, ops, req_time, latency_precentiles)
+                        let throughput = ops as f64 / bench_clock_time.as_millis() as f64 * 1000f64;
+                        (bench_time, bench_clock_time, ops, throughput, req_time)
                     })
                     .unwrap()
             })
@@ -63,7 +64,28 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
             .into_iter()
             .map(|t| t.join().unwrap())
             .collect::<Vec<_>>();
-        ctl.stop();
+        let all_ops = all_results
+            .iter()
+            .map(|(_, _, ops, _, _)| *ops)
+            .sum::<usize>();
+        let all_throughput = all_results
+            .iter()
+            .map(|(_, _, _, throughput, _)| *throughput)
+            .sum::<f64>();
+        let all_req_time = all_results
+            .iter()
+            .map(|(_, _, _, _, req_t)| req_t.clone().into_iter())
+            .flatten()
+            .collect::<Vec<_>>();
+        let (c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
+        ctl.stop(PlaybackReport {
+            ops: all_ops as u64,
+            throughput: all_throughput,
+            c90,
+            c99,
+            c99_9,
+            c99_99,
+        });
     });
 }
 
