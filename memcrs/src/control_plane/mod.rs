@@ -15,25 +15,30 @@ use hyper::{Method, Request};
 use hyper_util::rt::TokioIo;
 use url::{form_urlencoded, Url};
 
+use crate::memcache::store::MemcStore;
 use crate::memcache_server::recorder::MasterRecorder;
+
+use self::playback_ctl::Playback;
 
 mod playback_ctl;
 mod runner;
 
-pub fn start_service(recorder: &Arc<MasterRecorder>) {
+pub fn start_service(recorder: &Arc<MasterRecorder>, store: &Arc<MemcStore>) {
     let recorder = recorder.clone();
+    let store = store.clone();
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .thread_name("Recorder")
             .enable_all()
             .build()
             .unwrap();
-        rt.block_on(start(&recorder))
+        rt.block_on(start(&recorder, &store))
     });
 }
 
 pub async fn start(
     recorder: &Arc<MasterRecorder>,
+    store: &Arc<MemcStore>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], 11280));
 
@@ -43,6 +48,7 @@ pub async fn start(
     // We start a loop to continuously accept incoming connections
     loop {
         let recorder = recorder.clone();
+        let store = store.clone();
         let (stream, _) = listener.accept().await?;
 
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
@@ -54,7 +60,14 @@ pub async fn start(
             // Finally, we bind the incoming connection to our `hello` service
             if let Err(err) = http1::Builder::new()
                 // `service_fn` converts our function in a `Service`
-                .serve_connection(io, Svc { recorder })
+                .serve_connection(
+                    io,
+                    Svc {
+                        recorder,
+                        store,
+                        playback: Arc::new(Playback::new()),
+                    },
+                )
                 .await
             {
                 println!("Error serving connection: {:?}", err);
@@ -65,6 +78,8 @@ pub async fn start(
 
 struct Svc {
     recorder: Arc<MasterRecorder>,
+    playback: Arc<playback_ctl::Playback>,
+    store: Arc<MemcStore>,
 }
 
 fn mk_response<'a>(s: &'a str) -> Result<Response<Full<Bytes>>, hyper::Error> {
@@ -85,9 +100,8 @@ impl Service<Request<IncomingBody>> for Svc {
             (&Method::GET, "/") => mk_response(&format!("Memc benchmark control plan")),
             (&Method::POST, "/start-record") => self.start_record(),
             (&Method::POST, "/stop-record") => self.stop_record(&req),
-            (&Method::POST, "/play-record") => todo!(),
-            (&Method::POST, "/play-and-benchmark") => todo!(),
-            (&Method::GET, "/playback-status") => todo!(),
+            (&Method::POST, "/play-record") => self.play_record(&req),
+            (&Method::GET, "/playback-status") => self.playback_status(),
             // Return the 404 Not Found for other routes, and don't increment counter.
             _ => return Box::pin(async { mk_response("oh no! not found".into()) }),
         };
@@ -110,6 +124,23 @@ impl Svc {
             Ok(conns) => mk_response(&format!("{}/{}", conns, self.recorder.max_conn_id())),
             Err(e) => mk_response(&e.to_string()),
         }
+    }
+    fn play_record(
+        &self,
+        req: &Request<IncomingBody>,
+    ) -> Result<Response<Full<Bytes>>, hyper::Error> {
+        let query = get_params(req).unwrap();
+        let name = query.get("name").unwrap();
+        let res = self.playback.start(name);
+        if res {
+            runner::run_records(&self.playback, name, &self.store)
+        }
+        mk_response(&format!("{}", res))
+    }
+    fn playback_status(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
+        let res = self.playback.status();
+        let json = serde_json::to_string(&res).unwrap();
+        mk_response(&format!("{}", json))
     }
 }
 

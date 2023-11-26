@@ -1,6 +1,7 @@
 extern crate core_affinity;
 use crate::control_plane;
 use crate::memcache;
+use crate::memcache::store::MemcStore;
 use crate::memcache_server;
 use crate::server;
 use crate::{cache::cache::Cache, memcache::cli::parser::RuntimeType};
@@ -45,7 +46,7 @@ fn create_current_thread_runtime() -> tokio::runtime::Runtime {
 
 fn create_current_thread_server(
     config: MemcrsArgs,
-    store: Arc<dyn Cache + Send + Sync>,
+    store: Arc<MemcStore>,
     recorder: &Arc<MasterRecorder>,
 ) -> tokio::runtime::Runtime {
     let addr = SocketAddr::new(config.listen_address, config.port);
@@ -57,7 +58,7 @@ fn create_current_thread_server(
 
     let core_ids = core_affinity::get_core_ids().unwrap();
     for i in 0..config.threads {
-        let store_rc = Arc::clone(&store);
+        let store_rc = store.clone();
         let core_ids_clone = core_ids.clone();
         let recorder = recorder.clone();
         std::thread::spawn(move || {
@@ -91,7 +92,7 @@ fn create_current_thread_server(
 
 fn create_threadpool_server(
     config: MemcrsArgs,
-    store: Arc<dyn Cache + Send + Sync>,
+    store: Arc<MemcStore>,
     recorder: &Arc<MasterRecorder>,
 ) -> tokio::runtime::Runtime {
     let addr = SocketAddr::new(config.listen_address, config.port);
@@ -101,9 +102,8 @@ fn create_threadpool_server(
         config.backlog_limit,
     );
     let runtime = create_multi_thread_runtime(config.threads);
-    let store_rc = Arc::clone(&store);
     let mut tcp_server =
-        memcache_server::memc_tcp::MemcacheTcpServer::new(memc_config, store_rc, recorder);
+        memcache_server::memc_tcp::MemcacheTcpServer::new(memc_config, store, recorder);
     runtime.spawn(async move { tcp_server.run(addr).await });
     runtime
 }
@@ -117,11 +117,10 @@ pub fn create_memcrs_server(
     let memcache_store =
         memcache::builder::MemcacheStoreBuilder::from_config(store_config, system_timer);
     let recorder = Arc::new(MasterRecorder::new());
-    control_plane::start_service(&recorder);
+    let storeage = Arc::new(MemcStore::new(memcache_store));
+    control_plane::start_service(&recorder, &storeage);
     match config.runtime_type {
-        RuntimeType::CurrentThread => {
-            create_current_thread_server(config, memcache_store, &recorder)
-        }
-        RuntimeType::MultiThread => create_threadpool_server(config, memcache_store, &recorder),
+        RuntimeType::CurrentThread => create_current_thread_server(config, storeage, &recorder),
+        RuntimeType::MultiThread => create_threadpool_server(config, storeage, &recorder),
     }
 }

@@ -12,7 +12,7 @@ use tracing::{debug, error};
 use super::client_handler;
 use super::recorder::MasterRecorder;
 use crate::cache::cache::Cache;
-use crate::memcache::store as storage;
+use crate::memcache::store::{self as storage, MemcStore};
 
 #[derive(Clone, Copy)]
 pub struct MemcacheServerConfig {
@@ -40,11 +40,11 @@ pub struct MemcacheTcpServer {
 impl MemcacheTcpServer {
     pub fn new(
         config: MemcacheServerConfig,
-        store: Arc<dyn Cache + Send + Sync>,
+        store: Arc<MemcStore>,
         recorder: &Arc<MasterRecorder>,
     ) -> MemcacheTcpServer {
         MemcacheTcpServer {
-            storage: Arc::new(storage::MemcStore::new(store)),
+            storage: store,
             master_recorder: recorder.clone(),
             config,
         }

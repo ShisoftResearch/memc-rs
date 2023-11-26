@@ -1,6 +1,5 @@
 use crate::{
-    memcache::store::{self, MemcStore},
-    memcache_server::handler::BinaryHandler,
+    memcache::store::MemcStore, memcache_server::handler::BinaryHandler,
     protocol::binary_codec::BinaryRequest,
 };
 use std::{
@@ -12,6 +11,7 @@ use std::{
 
 use super::playback_ctl::{Playback, PlaybackReport};
 use minstant::Instant;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
     // Asynchrnozed running recording in a seperate thread
@@ -21,16 +21,17 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
     ctl.start(&name);
     thread::spawn(move || {
         let dataset = load_record_files(&name);
-        let all_threads = dataset
+        let all_run_threads = dataset
             .into_iter()
-            .map(|(conn_id, data)| {
+            .enumerate()
+            .map(|(tid, (conn_id, data))| {
                 let handler = BinaryHandler::new(store.clone());
                 thread::Builder::new()
                     .name(format!("Rec-conn-{}", conn_id))
                     .spawn(move || {
+                        pin_by_tid(tid);
                         let ops = data.len();
                         let mut time_vec = vec![0; ops];
-                        let mut time_coli_vec = vec![0; ops];
                         let mut idx = 0;
                         let start_clock = Instant::now();
                         let start_time = tsc();
@@ -41,24 +42,52 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                         }
                         let end_time = tsc();
                         let end_clock = Instant::now();
-                        let coil_start_time = tsc();
-                        for i in 0..ops {
-                            time_coli_vec[i] = tsc();
-                        }
-                        let coli_time = tsc() - coil_start_time;
-                        let coil_clock_time = Instant::now() - end_clock;
-                        let bench_time = end_time - start_time - coli_time;
-                        let bench_clock_time = end_clock - start_clock - coil_clock_time;
-                        let mut req_time = vec![0; ops];
-                        req_time[0] = time_vec[0] - start_time;
-                        for i in 1..time_vec.len() {
-                            req_time[i] = time_vec[i] - time_vec[i - 1];
-                        }
-                        let throughput = ops as f64 / bench_clock_time.as_millis() as f64 * 1000f64;
-                        (bench_time, bench_clock_time, ops, throughput, req_time)
+                        (
+                            tid,
+                            conn_id,
+                            ops,
+                            start_time,
+                            start_clock,
+                            end_time,
+                            end_clock,
+                            time_vec,
+                        )
                     })
                     .unwrap()
             })
+            .collect::<Vec<_>>();
+        let all_threads = all_run_threads
+            .into_iter()
+            .map(|t| t.join().unwrap())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(
+                |(tid, conn_id, ops, start_time, start_clock, end_time, end_clock, time_vec)| {
+                    thread::Builder::new()
+                        .name(format!("Rec-coil-conn-{}", conn_id))
+                        .spawn(move || {
+                            pin_by_tid(tid);
+                            let mut time_coli_vec = vec![0; ops];
+                            let coil_start_time = tsc();
+                            for i in 0..ops {
+                                time_coli_vec[i] = tsc();
+                            }
+                            let coli_time = tsc() - coil_start_time;
+                            let coil_clock_time = Instant::now() - end_clock;
+                            let bench_time = end_time - start_time - coli_time;
+                            let bench_clock_time = end_clock - start_clock - coil_clock_time;
+                            let mut req_time = vec![0; ops];
+                            req_time[0] = time_vec[0] - start_time;
+                            for i in 1..time_vec.len() {
+                                req_time[i] = time_vec[i] - time_vec[i - 1];
+                            }
+                            let throughput =
+                                ops as f64 / bench_clock_time.as_millis() as f64 * 1000f64;
+                            (bench_time, bench_clock_time, ops, throughput, req_time)
+                        })
+                        .unwrap()
+                },
+            )
             .collect::<Vec<_>>();
         let all_results = all_threads
             .into_iter()
@@ -90,30 +119,42 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
 }
 
 fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {
-    let mut res = vec![];
     let working_dir = env::current_dir().unwrap();
     let full_file = working_dir.join(name);
     let full_path = full_file.as_path();
     let path_dir = full_path.parent().unwrap();
     let shorten_name = full_path.file_name().unwrap().to_str().unwrap();
     let dir_files = fs::read_dir(path_dir).unwrap();
-    for dir_entry in dir_files {
-        let file_path = dir_entry.unwrap();
-        let filename_buff = file_path
-            .path()
-            .strip_prefix(path_dir)
-            .unwrap()
-            .to_path_buf();
-        let filename = filename_buff.to_str().unwrap();
-        if filename.starts_with(&format!("{}-", shorten_name)) && filename.ends_with(".bin") {
+    let res = dir_files
+        .filter_map(|dir_entry| {
+            let file_path = dir_entry.unwrap();
+            let filename = {
+                let filename_buff = file_path
+                    .path()
+                    .strip_prefix(path_dir)
+                    .unwrap()
+                    .to_path_buf();
+                filename_buff.to_str().unwrap().to_string()
+            };
+            if filename.starts_with(&format!("{}-", shorten_name)) && filename.ends_with(".bin") {
+                return Some((filename, file_path));
+            } else {
+                return None;
+            }
+        })
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(|(filename, file_path)| {
             let name_comps = filename.split("-").collect::<Vec<_>>();
-            assert_eq!(name_comps.len(), 2);
-            let conn_id: u64 = name_comps[1].parse().unwrap();
+            assert_eq!(name_comps.len(), 3);
+            let conn_id: u64 = name_comps[1]
+                .parse()
+                .unwrap_or_else(|_| panic!("{:?}", name_comps));
             let file = File::open(file_path.path()).unwrap();
             let data: Vec<BinaryRequest> = bincode::deserialize_from(file).unwrap();
-            res.push((conn_id, data));
-        }
-    }
+            (conn_id, data)
+        })
+        .collect::<Vec<_>>();
     return res;
 }
 
@@ -147,3 +188,5 @@ fn calculate_percentiles(latencies: &Vec<u64>) -> (u64, u64, u64, u64) {
 
     (c90, c99, c99_9, c99_99)
 }
+
+fn pin_by_tid(tid: usize) {}

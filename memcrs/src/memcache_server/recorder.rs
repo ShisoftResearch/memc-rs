@@ -7,6 +7,7 @@ use std::{
 };
 
 use parking_lot::Mutex;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::protocol::binary_codec::BinaryRequest;
 
@@ -94,15 +95,15 @@ impl MasterRecorder {
         info!("Start dumping recording for '{}'", name);
         let mut all_recordings = self.all_recordings.lock();
         let conns = all_recordings.len();
-        for (conn_id, reqs) in all_recordings.iter() {
-            let filename = format!("{}-{}.bin", name, conn_id);
+        all_recordings.par_iter().for_each(|(conn_id, reqs)| {
+            let filename = format!("{}-{}-rec.bin", name, conn_id);
             let mut f = File::create(filename).unwrap();
-            bincode::serialize_into(&mut f, reqs)?;
+            bincode::serialize_into(&mut f, reqs).unwrap();
             info!(
                 "Dump recording '{}' for connection {} completed",
                 name, conn_id
             );
-        }
+        });
         all_recordings.clear();
         self.enabled.store(false, Relaxed);
         Ok(conns as u32)
