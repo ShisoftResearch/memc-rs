@@ -1,10 +1,10 @@
 extern crate core_affinity;
 use crate::control_plane;
 use crate::memcache;
+use crate::memcache::cli::parser::RuntimeType;
 use crate::memcache::store::MemcStore;
 use crate::memcache_server;
 use crate::server;
-use crate::memcache::cli::parser::RuntimeType;
 use std::net::SocketAddr;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},

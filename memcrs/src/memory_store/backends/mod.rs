@@ -1,5 +1,5 @@
-use crate::cache::cache::{CacheMetaData, CachePredicate, RemoveIfResult, SetStatus};
-use crate::cache::error::{CacheError, Result};
+use crate::cache::cache::{CacheMetaData, CachePredicate, SetStatus};
+use crate::cache::error::Result;
 use crate::memcache::store::{KeyType, Record};
 
 use super::store::Peripherals;

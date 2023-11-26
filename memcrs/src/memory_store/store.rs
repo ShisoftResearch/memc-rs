@@ -1,23 +1,14 @@
 use crate::cache::cache::{
     impl_details, Cache, CacheMetaData, CachePredicate, KeyType, Record, RemoveIfResult, SetStatus,
-    ValueType,
 };
-use crate::cache::error::{CacheError, Result};
+use crate::cache::error::Result;
 use crate::server::timer;
-use std::fs::File;
-use std::io::BufWriter;
+use serde_derive::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use bincode::serialize_into;
-use bytes::Bytes;
-use lightning::map::{Map, PtrHashMap};
-use parking_lot::Mutex;
-use serde_derive::{Deserialize, Serialize};
-
 use super::backends::lightning::LightningBackend;
 use super::backends::StorageBackend;
-type Recorder = PtrHashMap<KeyType, Arc<Mutex<Vec<(char, Option<Record>)>>>>;
 pub type DefaultMemoryStore = MemoryStore<LightningBackend>;
 
 #[derive(Serialize, Deserialize)]
@@ -48,10 +39,6 @@ impl<M: StorageBackend> MemoryStore<M> {
                 cas_id: AtomicU64::new(1),
             },
         }
-    }
-
-    fn get_cas_id(&self) -> u64 {
-        self.peripherals.get_cas_id()
     }
 }
 
