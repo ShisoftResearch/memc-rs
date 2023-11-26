@@ -13,7 +13,7 @@ use hyper::server::conn::http1;
 use hyper::{body::Incoming as IncomingBody, Response};
 use hyper::{Method, Request};
 use hyper_util::rt::TokioIo;
-use url::{form_urlencoded, Url};
+use url::form_urlencoded;
 
 use crate::memcache::store::MemcStore;
 use crate::memcache_server::recorder::MasterRecorder;

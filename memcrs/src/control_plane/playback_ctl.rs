@@ -1,4 +1,4 @@
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
 use serde_derive::{Deserialize, Serialize};

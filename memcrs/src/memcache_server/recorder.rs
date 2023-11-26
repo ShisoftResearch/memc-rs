@@ -2,7 +2,7 @@ use std::fs::File;
 use std::sync::atomic::Ordering::*;
 use std::{
     collections::HashMap,
-    mem::{replace, swap},
+    mem::replace,
     sync::{atomic::*, Arc},
 };
 

@@ -11,7 +11,6 @@ use tracing::{debug, error};
 
 use super::client_handler;
 use super::recorder::MasterRecorder;
-use crate::cache::cache::Cache;
 use crate::memcache::store::{self as storage, MemcStore};
 
 #[derive(Clone, Copy)]

@@ -4,7 +4,7 @@ use crate::memcache;
 use crate::memcache::store::MemcStore;
 use crate::memcache_server;
 use crate::server;
-use crate::{cache::cache::Cache, memcache::cli::parser::RuntimeType};
+use crate::memcache::cli::parser::RuntimeType;
 use std::net::SocketAddr;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
