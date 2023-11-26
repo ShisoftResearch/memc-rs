@@ -10,6 +10,7 @@ use std::{
 };
 
 use super::playback_ctl::{Playback, PlaybackReport};
+use affinity::{get_core_num, set_thread_affinity};
 use minstant::Instant;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -21,6 +22,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
     ctl.start(&name);
     thread::spawn(move || {
         let dataset = load_record_files(&name);
+        let num_threads = dataset.len();
         let all_run_threads = dataset
             .into_iter()
             .enumerate()
@@ -29,7 +31,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                 thread::Builder::new()
                     .name(format!("Rec-conn-{}", conn_id))
                     .spawn(move || {
-                        pin_by_tid(tid);
+                        pin_by_tid(tid, num_threads);
                         let ops = data.len();
                         let mut time_vec = vec![0; ops];
                         let mut idx = 0;
@@ -66,7 +68,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
                     thread::Builder::new()
                         .name(format!("Rec-coil-conn-{}", conn_id))
                         .spawn(move || {
-                            pin_by_tid(tid);
+                            pin_by_tid(tid, num_threads);
                             let mut time_coli_vec = vec![0; ops];
                             let coil_start_time = tsc();
                             for i in 0..ops {
@@ -106,10 +108,16 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
             .map(|(_, _, _, _, req_t)| req_t.clone().into_iter())
             .flatten()
             .collect::<Vec<_>>();
+        let max_bench_time = all_results
+            .iter()
+            .map(|(_, t, _, _, _)| t.as_millis())
+            .max()
+            .unwrap() as u64;
         let (c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
         ctl.stop(PlaybackReport {
             ops: all_ops as u64,
             throughput: all_throughput,
+            max_time_ms: max_bench_time,
             c90,
             c99,
             c99_9,
@@ -189,4 +197,8 @@ fn calculate_percentiles(latencies: &Vec<u64>) -> (u64, u64, u64, u64) {
     (c90, c99, c99_9, c99_99)
 }
 
-fn pin_by_tid(tid: usize) {}
+fn pin_by_tid(tid: usize, num_t: usize) {
+    let num_cores = get_core_num();
+    let core_assign_step = num_cores / num_t;
+    set_thread_affinity(&vec![tid * core_assign_step]).unwrap();
+}

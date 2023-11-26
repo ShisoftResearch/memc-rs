@@ -1,3 +1,4 @@
+use affinity::get_core_num;
 use byte_unit::Byte;
 use clap::{command, Parser, ValueEnum};
 use std::{fmt::Debug, net::IpAddr, ops::RangeInclusive};
@@ -38,7 +39,7 @@ const MEMORY_LIMIT: &str = "64MiB";
 const MAX_ITEM_SIZE: &str = "1MiB";
 
 fn get_default_threads_number() -> usize {
-    num_cpus::get_physical().to_string().parse().unwrap()
+    get_core_num()
 }
 
 #[derive(Parser, Debug, Clone)]
