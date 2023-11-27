@@ -110,7 +110,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
             .collect::<Vec<_>>();
         let max_bench_time = all_results
             .iter()
-            .map(|(_, t, _, _, _)| t.as_millis())
+            .map(|(_, t, _, _, _)| t.as_millis() as u64)
             .max()
             .unwrap() as u64;
         let (c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
