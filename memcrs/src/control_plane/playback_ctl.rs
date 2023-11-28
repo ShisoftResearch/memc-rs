@@ -17,6 +17,8 @@ pub struct PlaybackReport {
     pub throughput: f64,
     pub max_time_ns: u64,
     pub max_time_clk: u64,
+    pub avg: f64,
+    pub c50: u64,
     pub c90: u64,
     pub c99: u64,
     pub c99_9: u64,

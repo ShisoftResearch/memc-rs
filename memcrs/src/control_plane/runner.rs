@@ -116,18 +116,21 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
             .max_by_key(|(_, (t, _, _, _, _))| t)
             .unwrap();
         let (max_bench_time_clk, max_bench_time, _, _, _) = all_results[max_time_id];
-        let (c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
+        let (c50, c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
         let max_req = *all_req_time.iter().max().unwrap();
         let min_req = *all_req_time.iter().min().unwrap();
+        let avg =  all_req_time.iter().sum::<u64>() as f64 / all_req_time.len() as f64;
         ctl.stop(PlaybackReport {
             ops: all_ops as u64,
             throughput: all_throughput,
             max_time_ns: max_bench_time.as_nanos() as u64,
             max_time_clk: max_bench_time_clk,
+            c50,
             c90,
             c99,
             c99_9,
             c99_99,
+            avg,
             max: max_req,
             min: min_req,
         });
@@ -185,7 +188,7 @@ fn tsc() -> u64 {
     unsafe { _rdtsc() }
 }
 
-fn calculate_percentiles(latencies: &Vec<u64>) -> (u64, u64, u64, u64) {
+fn calculate_percentiles(latencies: &Vec<u64>) -> (u64, u64, u64, u64, u64) {
     // Sort the latencies
     let mut latencies = latencies.clone();
     latencies.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -198,12 +201,13 @@ fn calculate_percentiles(latencies: &Vec<u64>) -> (u64, u64, u64, u64) {
     }
 
     // Calculate percentiles
+    let c50 = percentile(&latencies, 50.0);
     let c90 = percentile(&latencies, 90.0);
     let c99 = percentile(&latencies, 99.0);
     let c99_9 = percentile(&latencies, 99.9);
     let c99_99 = percentile(&latencies, 99.99);
 
-    (c90, c99, c99_9, c99_99)
+    (c50, c90, c99, c99_9, c99_99)
 }
 
 fn pin_by_tid(tid: usize, num_t: usize) {
