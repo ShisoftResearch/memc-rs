@@ -16,10 +16,13 @@ pub struct PlaybackReport {
     pub ops: u64,
     pub throughput: f64,
     pub max_time_ms: u64,
+    pub max_time_clk: u64,
     pub c90: u64,
     pub c99: u64,
     pub c99_9: u64,
     pub c99_99: u64,
+    pub min: u64,
+    pub max: u64
 }
 
 pub struct Playback {

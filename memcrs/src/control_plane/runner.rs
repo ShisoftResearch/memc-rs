@@ -110,20 +110,26 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
             .map(|(_, _, _, _, req_t)| req_t.clone().into_iter())
             .flatten()
             .collect::<Vec<_>>();
-        let max_bench_time = all_results
+        let (max_time_id, _) = all_results
             .iter()
-            .map(|(_, t, _, _, _)| t.as_millis() as u64)
-            .max()
-            .unwrap() as u64;
+            .enumerate()
+            .max_by_key(|(_, (t, _, _, _, _))| t)
+            .unwrap();
+        let (max_bench_time_clk, max_bench_time, _, _, _) = all_results[max_time_id];
         let (c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
+        let max_req = *all_req_time.iter().max().unwrap();
+        let min_req = *all_req_time.iter().min().unwrap();
         ctl.stop(PlaybackReport {
             ops: all_ops as u64,
             throughput: all_throughput,
-            max_time_ms: max_bench_time,
+            max_time_ms: max_bench_time.as_millis() as u64,
+            max_time_clk: max_bench_time_clk,
             c90,
             c99,
             c99_9,
             c99_99,
+            max: max_req,
+            min: min_req,
         });
     });
     return true;
