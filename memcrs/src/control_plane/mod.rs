@@ -45,15 +45,21 @@ pub async fn start(
     // We create a TcpListener and bind it to 127.0.0.1:11280
     let listener = TcpListener::bind(addr).await?;
 
+    let recorder = recorder.clone();
+    let store = store.clone();
+    let inner = Arc::new(SvcInner {
+        recorder,
+        store,
+        playback: Arc::new(Playback::new()),
+    });
     // We start a loop to continuously accept incoming connections
     loop {
-        let recorder = recorder.clone();
-        let store = store.clone();
         let (stream, _) = listener.accept().await?;
 
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
         // `hyper::rt` IO traits.
         let io: TokioIo<_> = TokioIo::new(stream);
+        let inner = inner.clone();
 
         // Spawn a tokio task to serve multiple connections concurrently
         tokio::task::spawn(async move {
@@ -62,11 +68,7 @@ pub async fn start(
                 // `service_fn` converts our function in a `Service`
                 .serve_connection(
                     io,
-                    Svc {
-                        recorder,
-                        store,
-                        playback: Arc::new(Playback::new()),
-                    },
+                    Svc { inner: inner.clone() },
                 )
                 .await
             {
@@ -77,6 +79,10 @@ pub async fn start(
 }
 
 struct Svc {
+    inner: Arc<SvcInner>
+}
+
+struct SvcInner {
     recorder: Arc<MasterRecorder>,
     playback: Arc<playback_ctl::Playback>,
     store: Arc<MemcStore>,
@@ -111,8 +117,8 @@ impl Service<Request<IncomingBody>> for Svc {
 
 impl Svc {
     fn start_record(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
-        self.recorder.start();
-        mk_response(&format!("{}", self.recorder.max_conn_id()))
+        self.inner.recorder.start();
+        mk_response(&format!("{}", self.inner.recorder.max_conn_id()))
     }
     fn stop_record(
         &self,
@@ -120,8 +126,8 @@ impl Svc {
     ) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
-        match self.recorder.dump(name) {
-            Ok(conns) => mk_response(&format!("{}/{}", conns, self.recorder.max_conn_id())),
+        match self.inner.recorder.dump(name) {
+            Ok(conns) => mk_response(&format!("{}/{}", conns, self.inner.recorder.max_conn_id())),
             Err(e) => mk_response(&e.to_string()),
         }
     }
@@ -131,12 +137,12 @@ impl Svc {
     ) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
-        let start_res = self.playback.start(name);
-        let run_res = start_res && runner::run_records(&self.playback, name, &self.store);
+        let start_res = self.inner.playback.start(name);
+        let run_res = start_res && runner::run_records(&self.inner.playback, name, &self.inner.store);
         mk_response(&format!("{}", run_res))
     }
     fn playback_status(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
-        let res = self.playback.status();
+        let res = self.inner.playback.status();
         let json = serde_json::to_string(&res).unwrap();
         mk_response(&format!("{}", json))
     }
