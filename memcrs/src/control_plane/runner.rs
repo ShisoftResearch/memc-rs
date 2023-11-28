@@ -14,14 +14,16 @@ use affinity::{get_core_num, set_thread_affinity};
 use minstant::Instant;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
+pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -> bool {
     // Asynchrnozed running recording in a seperate thread
     let ctl = ctl.clone();
     let store = store.clone();
     let name = name.clone();
-    ctl.start(&name);
+    let dataset = load_record_files(&name);
+    if dataset.is_empty() {
+        return false;
+    }
     thread::spawn(move || {
-        let dataset = load_record_files(&name);
         let num_threads = dataset.len();
         let all_run_threads = dataset
             .into_iter()
@@ -124,6 +126,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) {
             c99_99,
         });
     });
+    return true;
 }
 
 fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {

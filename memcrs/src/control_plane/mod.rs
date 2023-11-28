@@ -131,11 +131,9 @@ impl Svc {
     ) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
-        let res = self.playback.start(name);
-        if res {
-            runner::run_records(&self.playback, name, &self.store)
-        }
-        mk_response(&format!("{}", res))
+        let start_res = self.playback.start(name);
+        let run_res = start_res && runner::run_records(&self.playback, name, &self.store);
+        mk_response(&format!("{}", run_res))
     }
     fn playback_status(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let res = self.playback.status();

@@ -45,6 +45,7 @@ impl Playback {
             stats.name = name.clone();
             stats.start_time = current_time_mills();
             stats.finish_time = None;
+            stats.report = None;
             return true;
         } else {
             return false;
