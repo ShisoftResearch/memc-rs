@@ -79,7 +79,12 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
                             let coli_time = tsc() - coil_start_time;
                             let coil_clock_time = Instant::now() - end_clock;
                             let bench_time = end_time - start_time - coli_time;
-                            let bench_clock_time = end_clock - start_clock - coil_clock_time;
+                            let bench_clock_time_with_coli = end_clock - start_clock;
+                            let bench_clock_time = if coil_clock_time < bench_clock_time_with_coli {
+                               bench_clock_time_with_coli - coil_clock_time
+                            } else {
+                                bench_clock_time_with_coli
+                            };
                             let mut req_time = vec![0; ops];
                             req_time[0] = time_vec[0] - start_time;
                             for i in 1..time_vec.len() {
