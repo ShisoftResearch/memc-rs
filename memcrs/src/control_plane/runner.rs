@@ -129,6 +129,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
             ops: all_ops as u64,
             throughput: all_throughput,
             max_time_ns: max_bench_time.as_nanos() as u64,
+            max_time_ms: max_bench_time.as_millis() as u64,
             max_time_clk: max_bench_time_clk,
             c50,
             c90,
