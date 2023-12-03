@@ -178,7 +178,7 @@ fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {
                 .unwrap_or_else(|_| panic!("{:?}", name_comps));
             let file = File::open(file_path.path()).unwrap();
             let data: Vec<BinaryRequest> = bincode::deserialize_from(file).unwrap();
-            (conn_id, data)
+            (conn_id, data.clone())  // Enforce a data clone, trying to promote underlying Bytes to a reference
         })
         .collect::<Vec<_>>();
     return res;
