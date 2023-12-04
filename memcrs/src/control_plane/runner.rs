@@ -23,10 +23,14 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
     if dataset.is_empty() {
         return false;
     }
+    let dataset_ref = dataset
+        .iter()
+        .map(|r| r.clone()) // Shallow clone here to avoid bring memory allocation to the backend
+        .collect::<Vec<_>>()
+        .into_iter();
+    let num_threads = dataset.len();
     thread::spawn(move || {
-        let num_threads = dataset.len();
-        let all_run_threads = dataset
-            .into_iter()
+        let all_run_threads = dataset_ref
             .enumerate()
             .map(|(tid, (conn_id, data))| {
                 let handler = BinaryHandler::new(store.clone());
@@ -141,6 +145,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
             min: min_req,
         });
     });
+    drop(dataset); // finally, drop the dataset
     return true;
 }
 
@@ -178,7 +183,7 @@ fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {
                 .unwrap_or_else(|_| panic!("{:?}", name_comps));
             let file = File::open(file_path.path()).unwrap();
             let data: Vec<BinaryRequest> = bincode::deserialize_from(file).unwrap();
-            (conn_id, data.clone())  // Enforce a data clone, trying to promote underlying Bytes to a reference
+            (conn_id, data)  // Enforce a data clone, trying to promote underlying Bytes to a reference
         })
         .collect::<Vec<_>>();
     return res;
