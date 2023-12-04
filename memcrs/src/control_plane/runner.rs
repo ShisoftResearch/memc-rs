@@ -25,7 +25,10 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
     }
     let dataset_ref = dataset
         .iter()
-        .map(|r| r.clone()) // Shallow clone here to avoid bring memory allocation to the backend
+        .map(|(ref id, ref reqs)| {
+            let new_reqs = reqs.iter().cloned().collect::<Vec<_>>();
+            (*id, new_reqs)
+        }) // Shallow clone here to avoid bring memory allocation to the backend
         .collect::<Vec<_>>()
         .into_iter();
     let num_threads = dataset.len();
