@@ -68,7 +68,9 @@ pub async fn start(
                 // `service_fn` converts our function in a `Service`
                 .serve_connection(
                     io,
-                    Svc { inner: inner.clone() },
+                    Svc {
+                        inner: inner.clone(),
+                    },
                 )
                 .await
             {
@@ -79,7 +81,7 @@ pub async fn start(
 }
 
 struct Svc {
-    inner: Arc<SvcInner>
+    inner: Arc<SvcInner>,
 }
 
 struct SvcInner {
@@ -138,7 +140,8 @@ impl Svc {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
         let start_res = self.inner.playback.start(name);
-        let run_res = start_res && runner::run_records(&self.inner.playback, name, &self.inner.store);
+        let run_res =
+            start_res && runner::run_records(&self.inner.playback, name, &self.inner.store);
         mk_response(&format!("{}", run_res))
     }
     fn playback_status(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {

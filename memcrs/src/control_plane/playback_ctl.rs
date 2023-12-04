@@ -25,7 +25,7 @@ pub struct PlaybackReport {
     pub c99_9: u64,
     pub c99_99: u64,
     pub min: u64,
-    pub max: u64
+    pub max: u64,
 }
 
 pub struct Playback {

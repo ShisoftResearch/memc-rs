@@ -23,16 +23,16 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
     if dataset.is_empty() {
         return false;
     }
-    let dataset_ref = dataset
-        .iter()
-        .map(|(ref id, ref reqs)| {
-            let new_reqs = reqs.iter().cloned().collect::<Vec<_>>();
-            (*id, new_reqs)
-        }) // Shallow clone here to avoid bring memory allocation to the backend
-        .collect::<Vec<_>>()
-        .into_iter();
-    let num_threads = dataset.len();
     thread::spawn(move || {
+        let dataset_ref = dataset
+            .iter()
+            .map(|(ref id, ref reqs)| {
+                let new_reqs = reqs.iter().cloned().collect::<Vec<_>>();
+                (*id, new_reqs)
+            }) // Shallow clone here to avoid bring memory allocation to the backend
+            .collect::<Vec<_>>()
+            .into_iter();
+        let num_threads = dataset.len();
         let all_run_threads = dataset_ref
             .enumerate()
             .map(|(tid, (conn_id, data))| {
@@ -88,7 +88,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
                             let bench_time = end_time - start_time - coli_time;
                             let bench_clock_time_with_coli = end_clock - start_clock;
                             let bench_clock_time = if coil_clock_time < bench_clock_time_with_coli {
-                               bench_clock_time_with_coli - coil_clock_time
+                                bench_clock_time_with_coli - coil_clock_time
                             } else {
                                 bench_clock_time_with_coli
                             };
@@ -131,7 +131,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
         let (c50, c90, c99, c99_9, c99_99) = calculate_percentiles(&all_req_time);
         let max_req = *all_req_time.iter().max().unwrap();
         let min_req = *all_req_time.iter().min().unwrap();
-        let avg =  all_req_time.iter().sum::<u64>() as f64 / all_req_time.len() as f64;
+        let avg = all_req_time.iter().sum::<u64>() as f64 / all_req_time.len() as f64;
         ctl.stop(PlaybackReport {
             ops: all_ops as u64,
             throughput: all_throughput,
@@ -147,8 +147,8 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
             max: max_req,
             min: min_req,
         });
+        drop(dataset); // finally, drop the dataset
     });
-    drop(dataset); // finally, drop the dataset
     return true;
 }
 
@@ -186,7 +186,7 @@ fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {
                 .unwrap_or_else(|_| panic!("{:?}", name_comps));
             let file = File::open(file_path.path()).unwrap();
             let data: Vec<BinaryRequest> = bincode::deserialize_from(file).unwrap();
-            (conn_id, data)  // Enforce a data clone, trying to promote underlying Bytes to a reference
+            (conn_id, data) // Enforce a data clone, trying to promote underlying Bytes to a reference
         })
         .collect::<Vec<_>>();
     return res;
