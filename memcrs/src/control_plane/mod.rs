@@ -110,6 +110,7 @@ impl Service<Request<IncomingBody>> for Svc {
             (&Method::POST, "/stop-record") => self.stop_record(&req),
             (&Method::POST, "/play-record") => self.play_record(&req),
             (&Method::GET, "/playback-status") => self.playback_status(),
+            (&Method::GET, "/ping") => mk_response("true"),
             // Return the 404 Not Found for other routes, and don't increment counter.
             _ => return Box::pin(async { mk_response("oh no! not found".into()) }),
         };
