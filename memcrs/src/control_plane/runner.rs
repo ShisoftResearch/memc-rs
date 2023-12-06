@@ -86,7 +86,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
                                 req_time[i] = time_vec[i] - time_vec[i - 1];
                             }
                             let throughput =
-                                ops as f64 / bench_clock_time.as_nanos() as f64 * 1e-9f64;
+                                ops as f64 / bench_clock_time.as_nanos() as f64 * 1e+9f64;
                             (bench_time, bench_clock_time, ops, throughput, req_time)
                         })
                         .unwrap()

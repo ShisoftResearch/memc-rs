@@ -6,6 +6,10 @@ use super::store::Peripherals;
 
 pub mod dashmap;
 pub mod lightning;
+pub mod cuckoo;
+pub mod concache;
+pub mod cht;
+pub mod scc;
 
 pub trait StorageBackend {
     fn init(cap: usize) -> Self;
