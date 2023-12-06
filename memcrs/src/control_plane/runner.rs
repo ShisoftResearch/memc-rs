@@ -78,27 +78,15 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
                         .name(format!("Rec-coil-conn-{}", conn_id))
                         .spawn(move || {
                             pin_by_tid(tid, num_threads);
-                            let mut time_coli_vec = vec![0; ops];
-                            let coil_start_time = tsc();
-                            for i in 0..ops {
-                                time_coli_vec[i] = tsc();
-                            }
-                            let coli_time = tsc() - coil_start_time;
-                            let coil_clock_time = Instant::now() - end_clock;
-                            let bench_time = end_time - start_time - coli_time;
-                            let bench_clock_time_with_coli = end_clock - start_clock;
-                            let bench_clock_time = if coil_clock_time < bench_clock_time_with_coli {
-                                bench_clock_time_with_coli - coil_clock_time
-                            } else {
-                                bench_clock_time_with_coli
-                            };
+                            let bench_time = end_time - start_time;
+                            let bench_clock_time = end_clock - start_clock;
                             let mut req_time = vec![0; ops];
                             req_time[0] = time_vec[0] - start_time;
                             for i in 1..time_vec.len() {
                                 req_time[i] = time_vec[i] - time_vec[i - 1];
                             }
                             let throughput =
-                                ops as f64 / bench_clock_time.as_millis() as f64 * 1000f64;
+                                ops as f64 / bench_clock_time.as_nanos() as f64 * 1e-9f64;
                             (bench_time, bench_clock_time, ops, throughput, req_time)
                         })
                         .unwrap()
