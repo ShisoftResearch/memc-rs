@@ -13,6 +13,10 @@ use jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
+#[cfg(feature = "bumpalo")]
+#[global_allocator]
+static GLOBAL: bump_allocator::BumpPointer = bump_allocator::BumpPointer;
+
 fn get_log_level(verbose: u8) -> tracing::Level {
     // Vary the output based on how many times the user used the "verbose" flag
     // // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'

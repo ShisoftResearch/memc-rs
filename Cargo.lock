@@ -133,6 +133,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
+name = "bump-allocator"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2edbf93379814cd29418bca52cbdc4c0118b973d7c1be1dc258bb2ab4f96eb2"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "byte-unit"
 version = "4.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -665,6 +674,7 @@ version = "0.0.1"
 dependencies = [
  "affinity",
  "bincode",
+ "bump-allocator",
  "byte-unit",
  "bytes",
  "clap",
