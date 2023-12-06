@@ -13,7 +13,7 @@ use jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
-#[cfg(feature = "bumpalo")]
+#[cfg(feature = "bumpallocator")]
 #[global_allocator]
 static GLOBAL: bump_allocator::BumpPointer = bump_allocator::BumpPointer;
 

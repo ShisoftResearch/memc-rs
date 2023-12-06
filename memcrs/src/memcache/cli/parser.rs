@@ -80,6 +80,9 @@ pub struct MemcrsArgs {
 
     #[arg(short, long, value_name = "ENGINE", default_value_t = Engine::Lightning, value_enum)]
     pub engine: Engine,
+
+    #[arg(short, long, value_name = "CAPACITY", default_value_t = 15000000)]
+    pub capacity: usize,
 }
 
 const PORT_RANGE: RangeInclusive<usize> = 1..=65535;
