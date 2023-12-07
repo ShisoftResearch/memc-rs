@@ -4,11 +4,13 @@ use crate::memcache::store::{KeyType, Record};
 
 use super::store::Peripherals;
 
-pub mod dashmap;
-pub mod lightning;
-pub mod cuckoo;
-pub mod concache;
 pub mod cht;
+pub mod concache;
+pub mod contrie;
+pub mod cuckoo;
+pub mod dashmap;
+pub mod flurry;
+pub mod lightning;
 pub mod scc;
 
 pub trait StorageBackend {

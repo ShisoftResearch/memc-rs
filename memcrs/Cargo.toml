@@ -49,6 +49,8 @@ lockfree-cuckoohash = "0.1.0"
 concache = "0.2.1"
 cht = "0.5"
 scc = "*"
+contrie = "0.1"
+flurry = "0.4"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = { version ="0.5.4", optional = true }

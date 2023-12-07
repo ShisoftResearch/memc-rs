@@ -112,8 +112,11 @@ pub fn create_memcrs_server(
     config: MemcrsArgs,
     system_timer: std::sync::Arc<server::timer::SystemTimer>,
 ) -> tokio::runtime::Runtime {
-    let store_config =
-        memcache::builder::MemcacheStoreConfig::new(config.memory_limit, config.capacity, config.engine);
+    let store_config = memcache::builder::MemcacheStoreConfig::new(
+        config.memory_limit,
+        config.capacity,
+        config.engine,
+    );
     let memcache_store =
         memcache::builder::MemcacheStoreBuilder::from_config(store_config, system_timer);
     let recorder = Arc::new(MasterRecorder::new());

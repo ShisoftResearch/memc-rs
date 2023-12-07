@@ -1,25 +1,22 @@
-use bytes::Bytes;
-use lockfree_cuckoohash::*;
-
+use super::StorageBackend;
 use crate::{cache::error::CacheError, memcache::store::*, memory_store::store::Peripherals};
 
-use super::StorageBackend;
+use contrie::ConMap;
 
-pub struct CuckooBackend(LockFreeCuckooHash<KeyType, Record>);
+pub struct ContrieBackend(ConMap<KeyType, Record>);
 
-impl StorageBackend for CuckooBackend {
-    fn init(cap: usize) -> Self {
-        Self(LockFreeCuckooHash::with_capacity(cap.next_power_of_two()))
+impl StorageBackend for ContrieBackend {
+    fn init(_cap: usize) -> Self {
+        Self(ConMap::new())
     }
 
     fn get(
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        let g = pin();
         self.0
-            .get(key, &g)
-            .map(|v| v.clone())
+            .get(key)
+            .map(|v| v.value().clone())
             .ok_or(CacheError::NotFound)
     }
 
@@ -27,11 +24,7 @@ impl StorageBackend for CuckooBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
-        if self.0.remove(key) {
-            return Some(Record::new(Bytes::new(), 0, 0, 0));
-        } else {
-            return None;
-        }
+        self.0.remove(key).map(|e| e.value().clone())
     }
 
     fn set(
@@ -42,7 +35,11 @@ impl StorageBackend for CuckooBackend {
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
         //trace!("Set: {:?}", &record.header);
         if record.header.cas > 0 {
-            unimplemented!();
+            record.header.cas += 1;
+            record.header.timestamp = peripherals.timestamp();
+            let cas = record.header.cas;
+            self.0.insert(key, record);
+            Ok(SetStatus { cas })
         } else {
             let cas = peripherals.get_cas_id();
             record.header.cas = cas;
@@ -57,7 +54,17 @@ impl StorageBackend for CuckooBackend {
         key: crate::memcache::store::KeyType,
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        unimplemented!()
+        if let Some(e) = self.0.get(&key) {
+            let record = e.value();
+            let matching = header.cas == 0 || record.header.cas == header.cas;
+            if matching {
+                return self.remove(&key).ok_or(CacheError::NotFound);
+            } else {
+                return Err(CacheError::KeyExists);
+            }
+        } else {
+            return Err(CacheError::NotFound);
+        }
     }
 
     fn flush(&self, header: crate::cache::cache::CacheMetaData) {
@@ -65,13 +72,17 @@ impl StorageBackend for CuckooBackend {
     }
 
     fn len(&self) -> usize {
-        self.0.size()
+        self.0.iter().count()
     }
 
     fn predict_keys(
         &self,
         f: &mut crate::cache::cache::CachePredicate,
     ) -> Vec<crate::memcache::store::KeyType> {
-        unimplemented!()
+        self.0
+            .iter()
+            .filter(|record| f(record.key(), record.value()))
+            .map(|record| record.key().clone())
+            .collect()
     }
 }

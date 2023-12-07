@@ -1,6 +1,6 @@
-use cht::HashMap;
-use crate::{memcache::store::*, cache::error::CacheError, memory_store::store::Peripherals};
 use super::StorageBackend;
+use crate::{cache::error::CacheError, memcache::store::*, memory_store::store::Peripherals};
+use cht::HashMap;
 
 pub struct ChtMapBackend(HashMap<KeyType, Record>);
 
