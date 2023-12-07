@@ -2,8 +2,13 @@ use super::cli::parser::Engine;
 use super::eviction_policy::EvictionPolicy;
 use super::random_policy::RandomPolicy;
 use crate::cache::cache::Cache;
+use crate::memory_store::backends::cht::ChtMapBackend;
+use crate::memory_store::backends::contrie::ContrieBackend;
+use crate::memory_store::backends::cuckoo::CuckooBackend;
 use crate::memory_store::backends::dashmap::DashMapBackend;
+use crate::memory_store::backends::flurry::FlurryMapBackend;
 use crate::memory_store::backends::lightning::LightningBackend;
+use crate::memory_store::backends::scc::SccHashMapBackend;
 use crate::memory_store::store::MemoryStore;
 use crate::server::timer;
 use std::cmp::max;
@@ -58,12 +63,12 @@ impl MemcacheStoreBuilder {
         match config.engine {
             Engine::Lightning => Arc::new(MemoryStore::<LightningBackend>::new(timer, cap)),
             Engine::DashMap => Arc::new(MemoryStore::<DashMapBackend>::new(timer, cap)),
-            Engine::Cuckoo => todo!(),
-            Engine::Concach => todo!(),
-            Engine::Cht => todo!(),
-            Engine::SccHashMap => todo!(),
-            Engine::Contrie => todo!(),
-            Engine::Flurry => todo!(),
+            Engine::Cuckoo => Arc::new(MemoryStore::<CuckooBackend>::new(timer, cap)),
+            Engine::Concach => unimplemented!(),
+            Engine::Cht => Arc::new(MemoryStore::<ChtMapBackend>::new(timer, cap)),
+            Engine::SccHashMap => Arc::new(MemoryStore::<SccHashMapBackend>::new(timer, cap)),
+            Engine::Contrie => Arc::new(MemoryStore::<ContrieBackend>::new(timer, cap)),
+            Engine::Flurry => Arc::new(MemoryStore::<FlurryMapBackend>::new(timer, cap)),
         }
     }
 }
