@@ -135,7 +135,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
             max: max_req,
             min: min_req,
         });
-        drop(dataset); // finally, drop the dataset
+        ctl.req_history.lock().push(dataset); // finally, drop the dataset
     });
     return true;
 }

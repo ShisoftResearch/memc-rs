@@ -3,6 +3,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use parking_lot::Mutex;
 use serde_derive::{Deserialize, Serialize};
 
+use crate::protocol::binary_codec::BinaryRequest;
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PlaybackStatus {
     name: String,
@@ -30,6 +32,7 @@ pub struct PlaybackReport {
 
 pub struct Playback {
     status: Mutex<PlaybackStatus>,
+    pub req_history: Mutex<Vec<Vec<(u64, Vec<BinaryRequest>)>>>
 }
 
 impl Playback {
@@ -42,6 +45,7 @@ impl Playback {
                 finish_time: Some(current),
                 report: None,
             }),
+            req_history: Mutex::new(vec![])
         }
     }
 
