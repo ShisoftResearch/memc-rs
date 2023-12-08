@@ -42,7 +42,7 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>, i
                     .spawn(move || {
                         pin_by_tid(tid, num_threads);
                         let data_len = data.len();
-                        (0..iters).for_each(|_| {
+                        (1..iters).for_each(|_| {
                             // Replicate dataset
                             data.append(&mut data[0..data_len].iter().cloned().collect());
                         });
