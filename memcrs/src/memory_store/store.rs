@@ -100,7 +100,7 @@ impl<M: StorageBackend> Cache for MemoryStore<M> {
 impl Peripherals {
     #[inline(always)]
     pub fn get_cas_id(&self) -> u64 {
-        self.cas_id.fetch_add(1, Ordering::Release)
+        self.cas_id.fetch_add(1, Ordering::Relaxed)
     }
 
     #[inline(always)]
