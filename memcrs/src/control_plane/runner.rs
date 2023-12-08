@@ -14,7 +14,7 @@ use affinity::{get_core_num, set_thread_affinity};
 use minstant::Instant;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
-pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -> bool {
+pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>, iters: u32) -> bool {
     // Asynchrnozed running recording in a seperate thread
     let ctl = ctl.clone();
     let store = store.clone();
@@ -35,12 +35,17 @@ pub fn run_records(ctl: &Arc<Playback>, name: &String, store: &Arc<MemcStore>) -
         let num_threads = dataset.len();
         let all_run_threads = dataset_ref
             .enumerate()
-            .map(|(tid, (conn_id, data))| {
+            .map(|(tid, (conn_id, mut data))| {
                 let handler = BinaryHandler::new(store.clone());
                 thread::Builder::new()
                     .name(format!("Rec-conn-{}", conn_id))
                     .spawn(move || {
                         pin_by_tid(tid, num_threads);
+                        let data_len = data.len();
+                        (0..iters).for_each(|_| {
+                            // Replicate dataset
+                            data.append(&mut data[0..data_len].iter().cloned().collect());
+                        });
                         let ops = data.len();
                         let mut time_vec = vec![0; ops];
                         let mut idx = 0;

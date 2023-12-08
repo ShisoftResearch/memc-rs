@@ -140,9 +140,10 @@ impl Svc {
     ) -> Result<Response<Full<Bytes>>, hyper::Error> {
         let query = get_params(req).unwrap();
         let name = query.get("name").unwrap();
+        let iters = query.get("iters").unwrap_or(&"1".to_string()).parse::<u32>().unwrap();
         let start_res = self.inner.playback.start(name);
         let run_res =
-            start_res && runner::run_records(&self.inner.playback, name, &self.inner.store);
+            start_res && runner::run_records(&self.inner.playback, name, &self.inner.store, iters);
         mk_response(&format!("{}", run_res))
     }
     fn playback_status(&self) -> Result<Response<Full<Bytes>>, hyper::Error> {
