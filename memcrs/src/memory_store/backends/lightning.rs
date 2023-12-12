@@ -57,7 +57,7 @@ impl StorageBackend for LightningBackend {
                     record.header.cas += 1;
                     record.header.timestamp = peripherals.timestamp();
                     let cas = record.header.cas;
-                    self.0.insert(key, record);
+                    self.0.insert_rt_ref(key, record);
                     Ok(SetStatus { cas })
                 }
             }
