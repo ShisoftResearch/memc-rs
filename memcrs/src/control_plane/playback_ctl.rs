@@ -32,7 +32,7 @@ pub struct PlaybackReport {
 
 pub struct Playback {
     status: Mutex<PlaybackStatus>,
-    pub req_history: Mutex<Vec<Vec<(u64, Vec<BinaryRequest>)>>>
+    pub req_history: Mutex<Vec<Vec<(u64, Vec<BinaryRequest>)>>>,
 }
 
 impl Playback {
@@ -45,7 +45,7 @@ impl Playback {
                 finish_time: Some(current),
                 report: None,
             }),
-            req_history: Mutex::new(vec![])
+            req_history: Mutex::new(vec![]),
         }
     }
 

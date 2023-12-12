@@ -21,14 +21,17 @@ impl StorageBackend for LightningBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        self.0.get(key).ok_or(CacheError::NotFound)
+        self.0
+            .get_ref(key)
+            .map(|rv| rv.clone())
+            .ok_or(CacheError::NotFound)
     }
 
     fn remove(
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
-        self.0.remove(&key)
+        self.0.remove_rt_ref(&key).map(|rv| rv.clone())
     }
 
     fn set(
@@ -62,7 +65,7 @@ impl StorageBackend for LightningBackend {
             let cas = peripherals.get_cas_id();
             record.header.cas = cas;
             record.header.timestamp = peripherals.timestamp();
-            self.0.insert(key, record);
+            self.0.insert_rt_ref(key, record);
             Ok(SetStatus { cas })
         }
     }
@@ -73,7 +76,11 @@ impl StorageBackend for LightningBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         if header.cas == 0 {
-            return self.0.remove(&key).ok_or(CacheError::NotFound);
+            return self
+                .0
+                .remove_rt_ref(&key)
+                .map(|rv| rv.clone())
+                .ok_or(CacheError::NotFound);
         } else {
             match self.0.lock(&key) {
                 Some(record) => {
