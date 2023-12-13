@@ -21,10 +21,12 @@ impl StorageBackend for LightningBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        self.0
-            .get_ref(key)
-            .map(|rv| rv.clone())
-            .ok_or(CacheError::NotFound)
+        match self.0.get_ref(key) {
+            Some(rv) => {
+                Ok(rv.clone())
+            }
+            None => Err(CacheError::NotFound)
+        }
     }
 
     fn remove(
