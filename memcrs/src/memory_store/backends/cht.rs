@@ -36,11 +36,8 @@ impl StorageBackend for ChtMapBackend {
         if record.header.cas > 0 {
             unimplemented!()
         } else {
-            let cas = peripherals.get_cas_id();
-            record.header.cas = cas;
-            record.header.timestamp = peripherals.timestamp();
             self.0.insert(key, record);
-            Ok(SetStatus { cas })
+            Ok(SetStatus { cas: 0 })
         }
     }
 

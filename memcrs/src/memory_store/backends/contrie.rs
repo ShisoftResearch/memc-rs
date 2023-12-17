@@ -41,11 +41,8 @@ impl StorageBackend for ContrieBackend {
             self.0.insert(key, record);
             Ok(SetStatus { cas })
         } else {
-            let cas = peripherals.get_cas_id();
-            record.header.cas = cas;
-            record.header.timestamp = peripherals.timestamp();
             self.0.insert(key, record);
-            Ok(SetStatus { cas })
+            Ok(SetStatus { cas: 0 })
         }
     }
 

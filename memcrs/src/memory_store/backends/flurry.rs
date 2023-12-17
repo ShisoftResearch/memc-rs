@@ -43,11 +43,8 @@ impl StorageBackend for FlurryMapBackend {
         if record.header.cas > 0 {
             unimplemented!()
         } else {
-            let cas = peripherals.get_cas_id();
-            record.header.cas = cas;
-            record.header.timestamp = peripherals.timestamp();
             mref.insert(key, record);
-            Ok(SetStatus { cas })
+            Ok(SetStatus { cas: 0 })
         }
     }
 
