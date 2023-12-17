@@ -36,6 +36,7 @@ impl SystemTimer {
 }
 
 impl Timer for SystemTimer {
+    #[inline(always)]
     fn timestamp(&self) -> u64 {
         self.seconds.load(Ordering::Relaxed)
     }
