@@ -64,11 +64,8 @@ impl StorageBackend for LightningBackend {
                 }
             }
         } else {
-            let cas = peripherals.get_cas_id();
-            record.header.cas = cas;
-            // record.header.timestamp = peripherals.timestamp();
             self.0.insert_rt_ref(key, record);
-            Ok(SetStatus { cas })
+            Ok(SetStatus { cas: 0 })
         }
     }
 
