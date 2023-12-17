@@ -62,9 +62,9 @@ impl StorageBackend for DashMapBackend {
                 }
             }
         } else {
-            let cas = peripherals.get_cas_id();
-            record.header.cas = cas;
-            record.header.timestamp = peripherals.timestamp();
+            let cas = 0; //peripherals.get_cas_id();
+            // record.header.cas = cas;
+            // record.header.timestamp = peripherals.timestamp();
             self.0.insert(key, record);
             Ok(SetStatus { cas })
         }
