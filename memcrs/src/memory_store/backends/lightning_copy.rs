@@ -10,9 +10,9 @@ use crate::{
 
 use super::StorageBackend;
 
-pub struct LightningBackend(PtrHashMap<KeyType, Record>);
+pub struct LightningCopyBackend(PtrHashMap<KeyType, Record>);
 
-impl StorageBackend for LightningBackend {
+impl StorageBackend for LightningCopyBackend {
     fn init(cap: usize) -> Self {
         Self(PtrHashMap::with_capacity(cap.next_power_of_two()))
     }
@@ -21,9 +21,9 @@ impl StorageBackend for LightningBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        match self.0.get_ref(key) {
+        match self.0.get(key) {
             Some(rv) => {
-                Ok(rv.clone())
+                Ok(rv)
             }
             None => Err(CacheError::NotFound)
         }
@@ -33,7 +33,7 @@ impl StorageBackend for LightningBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
-        self.0.remove_rt_ref(&key).map(|rv| rv.clone())
+        self.0.remove(&key)
     }
 
     fn set(
@@ -77,8 +77,7 @@ impl StorageBackend for LightningBackend {
         if header.cas == 0 {
             return self
                 .0
-                .remove_rt_ref(&key)
-                .map(|rv| rv.clone())
+                .remove(&key)
                 .ok_or(CacheError::NotFound);
         } else {
             match self.0.lock(&key) {

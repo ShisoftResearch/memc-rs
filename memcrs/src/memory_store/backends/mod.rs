@@ -11,6 +11,7 @@ pub mod cuckoo;
 pub mod dashmap;
 pub mod flurry;
 pub mod lightning;
+pub mod lightning_copy;
 pub mod scc;
 
 pub trait StorageBackend {

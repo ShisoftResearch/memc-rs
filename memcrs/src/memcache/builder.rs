@@ -8,6 +8,7 @@ use crate::memory_store::backends::cuckoo::CuckooBackend;
 use crate::memory_store::backends::dashmap::DashMapBackend;
 use crate::memory_store::backends::flurry::FlurryMapBackend;
 use crate::memory_store::backends::lightning::LightningBackend;
+use crate::memory_store::backends::lightning_copy::LightningCopyBackend;
 use crate::memory_store::backends::scc::SccHashMapBackend;
 use crate::memory_store::store::MemoryStore;
 use crate::server::timer;
@@ -62,6 +63,7 @@ impl MemcacheStoreBuilder {
         let cap = max(esti_cap, 8192) as usize;
         match config.engine {
             Engine::Lightning => Arc::new(MemoryStore::<LightningBackend>::new(timer, cap)),
+            Engine::LightningCopy => Arc::new(MemoryStore::<LightningCopyBackend>::new(timer, cap)),
             Engine::DashMap => Arc::new(MemoryStore::<DashMapBackend>::new(timer, cap)),
             Engine::Cuckoo => Arc::new(MemoryStore::<CuckooBackend>::new(timer, cap)),
             Engine::Concach => unimplemented!(),

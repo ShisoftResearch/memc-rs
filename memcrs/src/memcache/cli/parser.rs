@@ -14,6 +14,7 @@ pub enum RuntimeType {
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum Engine {
     Lightning,
+    LightningCopy,
     DashMap,
     Cuckoo,
     Concach,
