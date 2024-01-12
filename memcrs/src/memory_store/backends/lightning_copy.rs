@@ -1,3 +1,5 @@
+use std::{hash::RandomState, alloc::System};
+
 use lightning::map::{Map, PtrHashMap};
 
 use crate::{
@@ -10,11 +12,11 @@ use crate::{
 
 use super::StorageBackend;
 
-pub struct LightningCopyBackend(PtrHashMap<KeyType, Record>);
+pub struct LightningCopyBackend(PtrHashMap<KeyType, Record, System, RandomState>);
 
 impl StorageBackend for LightningCopyBackend {
     fn init(cap: usize) -> Self {
-        Self(PtrHashMap::with_capacity(cap.next_power_of_two()))
+        Self(PtrHashMap::with_capacity_and_hasher(cap.next_power_of_two(), RandomState::new()))
     }
 
     fn get(
