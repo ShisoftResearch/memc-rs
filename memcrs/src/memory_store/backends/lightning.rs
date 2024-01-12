@@ -1,4 +1,4 @@
-use std::{hash::RandomState, alloc::System};
+use std::{alloc::System, hash::RandomState};
 
 use lightning::map::{Map, PtrHashMap};
 
@@ -16,7 +16,10 @@ pub struct LightningBackend(PtrHashMap<KeyType, Record, System, RandomState>);
 
 impl StorageBackend for LightningBackend {
     fn init(cap: usize) -> Self {
-        Self(PtrHashMap::with_capacity_and_hasher(cap.next_power_of_two(), RandomState::new()))
+        Self(PtrHashMap::with_capacity_and_hasher(
+            cap.next_power_of_two(),
+            RandomState::new(),
+        ))
     }
 
     fn get(
@@ -24,10 +27,8 @@ impl StorageBackend for LightningBackend {
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         match self.0.get_ref(key) {
-            Some(rv) => {
-                Ok(rv.clone())
-            }
-            None => Err(CacheError::NotFound)
+            Some(rv) => Ok(rv.clone()),
+            None => Err(CacheError::NotFound),
         }
     }
 

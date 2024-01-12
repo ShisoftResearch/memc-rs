@@ -10,6 +10,8 @@ use parking_lot::Mutex;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::protocol::binary_codec::BinaryRequest;
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
 
 pub struct MasterRecorder {
     enabled: AtomicBool,
@@ -97,7 +99,7 @@ impl MasterRecorder {
         let conns = all_recordings.len();
         all_recordings.par_iter().for_each(|(conn_id, reqs)| {
             let filename = format!("{}-{}-rec.bin", name, conn_id);
-            let mut f = File::create(filename).unwrap();
+            let mut f = ZlibEncoder::new(File::create(filename).unwrap(), Compression::default());
             bincode::serialize_into(&mut f, reqs).unwrap();
             info!(
                 "Dump recording '{}' for connection {} completed",

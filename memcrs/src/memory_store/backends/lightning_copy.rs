@@ -1,4 +1,4 @@
-use std::{hash::RandomState, alloc::System};
+use std::{alloc::System, hash::RandomState};
 
 use lightning::map::{Map, PtrHashMap};
 
@@ -16,7 +16,10 @@ pub struct LightningCopyBackend(PtrHashMap<KeyType, Record, System, RandomState>
 
 impl StorageBackend for LightningCopyBackend {
     fn init(cap: usize) -> Self {
-        Self(PtrHashMap::with_capacity_and_hasher(cap.next_power_of_two(), RandomState::new()))
+        Self(PtrHashMap::with_capacity_and_hasher(
+            cap.next_power_of_two(),
+            RandomState::new(),
+        ))
     }
 
     fn get(
@@ -24,10 +27,8 @@ impl StorageBackend for LightningCopyBackend {
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         match self.0.get(key) {
-            Some(rv) => {
-                Ok(rv)
-            }
-            None => Err(CacheError::NotFound)
+            Some(rv) => Ok(rv),
+            None => Err(CacheError::NotFound),
         }
     }
 
@@ -77,10 +78,7 @@ impl StorageBackend for LightningCopyBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         if header.cas == 0 {
-            return self
-                .0
-                .remove(&key)
-                .ok_or(CacheError::NotFound);
+            return self.0.remove(&key).ok_or(CacheError::NotFound);
         } else {
             match self.0.lock(&key) {
                 Some(record) => {

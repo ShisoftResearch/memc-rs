@@ -11,6 +11,7 @@ use std::{
 
 use super::playback_ctl::{Playback, PlaybackReport};
 use affinity::{get_core_num, set_thread_affinity};
+use flate2::read::ZlibDecoder;
 use minstant::Instant;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
@@ -178,7 +179,8 @@ fn load_record_files(name: &String) -> Vec<(u64, Vec<BinaryRequest>)> {
                 .parse()
                 .unwrap_or_else(|_| panic!("{:?}", name_comps));
             let file = File::open(file_path.path()).unwrap();
-            let data: Vec<BinaryRequest> = bincode::deserialize_from(file).unwrap();
+            let compress_decoder = ZlibDecoder::new(file);
+            let data: Vec<BinaryRequest> = bincode::deserialize_from(compress_decoder).unwrap();
             (conn_id, data) // Enforce a data clone, trying to promote underlying Bytes to a reference
         })
         .collect::<Vec<_>>();
