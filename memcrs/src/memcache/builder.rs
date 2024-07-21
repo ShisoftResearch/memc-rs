@@ -9,6 +9,7 @@ use crate::memory_store::backends::dashmap::DashMapBackend;
 use crate::memory_store::backends::flurry::FlurryMapBackend;
 use crate::memory_store::backends::lightning::LightningBackend;
 use crate::memory_store::backends::lightning_copy::LightningCopyBackend;
+use crate::memory_store::backends::rw::RwMapBackend;
 use crate::memory_store::backends::scc::SccHashMapBackend;
 use crate::memory_store::store::MemoryStore;
 use crate::server::timer;
@@ -71,6 +72,7 @@ impl MemcacheStoreBuilder {
             Engine::SccHashMap => Arc::new(MemoryStore::<SccHashMapBackend>::new(timer, cap)),
             Engine::Contrie => Arc::new(MemoryStore::<ContrieBackend>::new(timer, cap)),
             Engine::Flurry => Arc::new(MemoryStore::<FlurryMapBackend>::new(timer, cap)),
+            Engine::RwLock => Arc::new(MemoryStore::<RwMapBackend>::new(timer, cap))
         }
     }
 }

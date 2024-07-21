@@ -13,6 +13,7 @@ pub mod flurry;
 pub mod lightning;
 pub mod lightning_copy;
 pub mod scc;
+pub mod rw;
 
 pub trait StorageBackend {
     fn init(cap: usize) -> Self;

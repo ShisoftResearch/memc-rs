@@ -22,6 +22,7 @@ pub enum Engine {
     SccHashMap,
     Contrie,
     Flurry,
+    RwLock
 }
 
 impl RuntimeType {
