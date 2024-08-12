@@ -12,6 +12,7 @@ pub mod dashmap;
 pub mod flurry;
 pub mod lightning;
 pub mod lightning_copy;
+pub mod lightning_lock;
 pub mod scc;
 pub mod rw;
 

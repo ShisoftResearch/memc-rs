@@ -15,6 +15,7 @@ pub enum RuntimeType {
 pub enum Engine {
     Lightning,
     LightningCopy,
+    LightningLock,
     DashMap,
     Cuckoo,
     Concach,
