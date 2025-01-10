@@ -41,10 +41,20 @@ impl CacheMetaData {
 }
 
 /// Value and meta data stored in cache
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Record {
     pub(crate) header: CacheMetaData,
     pub(crate) value: ValueType,
+}
+
+impl Clone for Record {
+    fn clone(&self) -> Self {
+        Record {
+            header: self.header.clone(),
+            // Do not clone value, avoid atomic operations
+            value: ValueType::new(), 
+        }
+    }
 }
 
 impl Record {
