@@ -1,0 +1,106 @@
+#pragma once
+#include <stddef.h>
+#include <stdint.h>
+#include <cstring>
+
+#define UNIFIED_STR_CAP 32
+#define UNIFIED_STR_LARGE_CAP 32 // (1 * 1024) // 1KB
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct {
+    uint8_t data[UNIFIED_STR_CAP];
+} UnifiedStr;
+
+typedef struct {
+    uint8_t data[UNIFIED_STR_LARGE_CAP];
+} UnifiedStrLarge;
+
+#ifdef __cplusplus
+}
+// Shared hash and equality for UnifiedStr
+struct UnifiedStrHash {
+  size_t operator()(const UnifiedStr& s) const {
+    // Optimized FNV-1a hash processing 8 bytes at a time for better performance
+    size_t h = 0xcbf29ce484222325;
+    
+    // Process 8 bytes at a time as uint64_t operations
+    const size_t full_chunks = UNIFIED_STR_CAP / 8;
+    for (size_t chunk = 0; chunk < full_chunks; ++chunk) {
+      // Read 8 bytes as uint64_t (assuming little-endian, which is most common)
+      uint64_t chunk_data;
+      std::memcpy(&chunk_data, &s.data[chunk * 8], sizeof(uint64_t));
+      
+      // Single XOR and multiply operation for 8 bytes
+      h = (h ^ chunk_data) * 0x100000001b3;
+    }
+    
+    // Process remaining bytes individually (0-7 bytes)
+    for (size_t i = full_chunks * 8; i < UNIFIED_STR_CAP; ++i) {
+      h = (h ^ s.data[i]) * 0x100000001b3;
+    }
+    
+    return h;
+  }
+};
+
+// FNV-1a hash for uint64_t keys, matching UnifiedStrHash algorithm
+struct UnifiedStrHash64 {
+  size_t operator()(const uint64_t& v) const {
+    // Optimized: process the entire uint64_t at once instead of byte-by-byte
+    size_t h = 0xcbf29ce484222325;
+    h = (h ^ v) * 0x100000001b3;
+    return h;
+  }
+};
+
+struct UnifiedStrEqual {
+  bool operator()(const UnifiedStr& a, const UnifiedStr& b) const {
+    //return std::memcmp(a.data, b.data, UNIFIED_STR_CAP) == 0;
+    return std::memcmp(a.data, b.data, UNIFIED_STR_CAP) == 0;
+  }
+};
+
+// Hash and equality for UnifiedStrLarge
+struct UnifiedStrLargeHash {
+  size_t operator()(const UnifiedStrLarge& s) const {
+    // Optimized FNV-1a hash processing 8 bytes at a time for better performance
+    size_t h = 0xcbf29ce484222325;
+    
+    // Process 8 bytes at a time as uint64_t operations
+    const size_t full_chunks = UNIFIED_STR_LARGE_CAP / 8;
+    for (size_t chunk = 0; chunk < full_chunks; ++chunk) {
+      // Read 8 bytes as uint64_t (assuming little-endian, which is most common)
+      uint64_t chunk_data;
+      std::memcpy(&chunk_data, &s.data[chunk * 8], sizeof(uint64_t));
+      
+      // Single XOR and multiply operation for 8 bytes
+      h = (h ^ chunk_data) * 0x100000001b3;
+    }
+    
+    // Process remaining bytes individually (0-7 bytes)
+    for (size_t i = full_chunks * 8; i < UNIFIED_STR_LARGE_CAP; ++i) {
+      h = (h ^ s.data[i]) * 0x100000001b3;
+    }
+    
+    return h;
+  }
+};
+
+struct UnifiedStrLargeEqual {
+  bool operator()(const UnifiedStrLarge& a, const UnifiedStrLarge& b) const {
+    return std::memcmp(a.data, b.data, UNIFIED_STR_LARGE_CAP) == 0;
+  }
+};
+
+// Patch: Mark UnifiedStr and UnifiedStrLarge as trivially copyable for C++ type traits
+namespace std {
+  template<>
+  struct is_trivially_copyable<UnifiedStr> : std::true_type {};
+  
+  template<>
+  struct is_trivially_copyable<UnifiedStrLarge> : std::true_type {};
+}
+#endif 
