@@ -1,24 +1,26 @@
-use std::{alloc::System, hash::RandomState};
+use std::alloc::System;
 
 use lightning::map::{Map, PtrHashMap};
 
 use crate::{
     cache::{
-        cache::{KeyType, Record, SetStatus},
+        cache::{CacheMetaData, Record, SetStatus},
         error::CacheError,
     },
     memory_store::store::Peripherals,
 };
 
 use super::StorageBackend;
+use crate::ffi::unified_str::{UnifiedStr, UnifiedStrHasher, UnifiedStrLarge};
+use bytes::Bytes;
 
-pub struct LightningBackend(PtrHashMap<KeyType, Record, System, RandomState>);
+pub struct LightningBackend(PtrHashMap<UnifiedStr, UnifiedStrLarge, System, UnifiedStrHasher>);
 
 impl StorageBackend for LightningBackend {
     fn init(cap: usize) -> Self {
         Self(PtrHashMap::with_capacity_and_hasher(
             cap.next_power_of_two(),
-            RandomState::new(),
+            UnifiedStrHasher::new(),
         ))
     }
 
@@ -26,8 +28,12 @@ impl StorageBackend for LightningBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        match self.0.get_ref(key) {
-            Some(rv) => Ok(rv.clone()),
+        let ukey = UnifiedStr::from_bytes(&key[..]);
+        match self.0.get_ref(&ukey) {
+            Some(v) => Ok(Record {
+                header: CacheMetaData::new(0, 0, 0),
+                value: Bytes::copy_from_slice(v.as_bytes()),
+            }),
             None => Err(CacheError::NotFound),
         }
     }
@@ -36,7 +42,11 @@ impl StorageBackend for LightningBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
-        self.0.remove_rt_ref(&key).map(|rv| rv.clone())
+        let ukey = UnifiedStr::from_bytes(&key[..]);
+        self.0.remove_rt_ref(&ukey).map(|v| Record {
+            header: CacheMetaData::new(0, 0, 0),
+            value: Bytes::copy_from_slice(v.as_bytes()),
+        })
     }
 
     fn set(
@@ -45,29 +55,17 @@ impl StorageBackend for LightningBackend {
         mut record: crate::memcache::store::Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
+        // Normalize value through UnifiedStrLarge and store value-only
+        let uval = UnifiedStrLarge::from_bytes(&record.value);
+        let ukey = UnifiedStr::from_bytes(&key[..]);
         if record.header.cas > 0 {
-            match self.0.lock(&key) {
-                Some(mut key_value) => {
-                    if key_value.header.cas != record.header.cas {
-                        Err(CacheError::KeyExists)
-                    } else {
-                        record.header.cas += 1;
-                        record.header.timestamp = peripherals.timestamp();
-                        let cas = record.header.cas;
-                        *key_value = record;
-                        Ok(SetStatus { cas })
-                    }
-                }
-                None => {
-                    record.header.cas += 1;
-                    record.header.timestamp = peripherals.timestamp();
-                    let cas = record.header.cas;
-                    self.0.insert_no_rt(key, record);
-                    Ok(SetStatus { cas })
-                }
-            }
+            record.header.cas += 1;
+            record.header.timestamp = peripherals.timestamp();
+            let cas = record.header.cas;
+            self.0.insert_no_rt(ukey, uval);
+            Ok(SetStatus { cas })
         } else {
-            self.0.insert_no_rt(key, record);
+            self.0.insert_no_rt(ukey, uval);
             Ok(SetStatus { cas: 0 })
         }
     }
@@ -77,34 +75,24 @@ impl StorageBackend for LightningBackend {
         key: crate::memcache::store::KeyType,
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
+        let ukey = UnifiedStr::from_bytes(&key[..]);
         if header.cas == 0 {
             return self
                 .0
-                .remove_rt_ref(&key)
-                .map(|rv| rv.clone())
+                .remove_rt_ref(&ukey)
+                .map(|v| Record {
+                    header,
+                    value: Bytes::copy_from_slice(v.as_bytes()),
+                })
                 .ok_or(CacheError::NotFound);
         } else {
-            match self.0.lock(&key) {
-                Some(record) => {
-                    if record.header.cas == header.cas {
-                        return Ok(record.remove());
-                    } else {
-                        return Err(CacheError::KeyExists);
-                    }
-                }
-                None => Err(CacheError::NotFound),
-            }
+            // No CAS tracking when storing value-only; emulate key-exists behavior
+            return Err(CacheError::KeyExists);
         }
     }
 
     fn flush(&self, header: crate::cache::cache::CacheMetaData) {
-        if header.time_to_live > 0 {
-            for k in self.0.keys() {
-                if let Some(mut value) = self.0.lock(&k) {
-                    value.header.time_to_live = header.time_to_live;
-                }
-            }
-        } else {
+        if header.time_to_live == 0 {
             self.0.clear();
         }
     }
@@ -120,8 +108,14 @@ impl StorageBackend for LightningBackend {
         self.0
             .entries()
             .into_iter()
-            .filter(|(k, v)| f(k, v))
-            .map(|(k, _v)| k)
+            .filter(|(k, v)| {
+                let rec = Record {
+                    header: CacheMetaData::new(0, 0, 0),
+                    value: Bytes::copy_from_slice(v.as_bytes()),
+                };
+                f(&Bytes::copy_from_slice(k.as_bytes_trimmed()), &rec)
+            })
+            .map(|(k, _v)| Bytes::copy_from_slice(k.as_bytes_trimmed()))
             .collect()
     }
 }

@@ -11,8 +11,6 @@ use crate::{
     memory_store::store::Peripherals,
 };
 
-
-
 pub struct RwMapBackend(RwLock<HashMap<KeyType, Record>>);
 
 impl StorageBackend for RwMapBackend {

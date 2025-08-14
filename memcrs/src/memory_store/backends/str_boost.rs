@@ -1,0 +1,161 @@
+use std::sync::Arc;
+
+use crate::cache::error::CacheError;
+use crate::{
+    cache::cache::{CacheMetaData, CachePredicate, SetStatus},
+    memcache::store::{KeyType, Record},
+    memory_store::store::Peripherals,
+};
+
+use super::StorageBackend;
+use crate::ffi::unified_str::{
+    UnifiedStr, UnifiedStrLarge, UNIFIED_STR_CAP, UNIFIED_STR_LARGE_CAP,
+};
+
+#[repr(C)]
+pub struct BoostStringMapOpaque;
+
+extern "C" {
+    fn new_boost_string_map(capacity: usize) -> *mut BoostStringMapOpaque;
+    fn free_boost_string_map(map: *mut BoostStringMapOpaque);
+    fn boost_string_insert(
+        map: *mut BoostStringMapOpaque,
+        key: &UnifiedStr,
+        value: &UnifiedStrLarge,
+    ) -> bool;
+    fn boost_string_get(
+        map: *mut BoostStringMapOpaque,
+        key: &UnifiedStr,
+        out_value: *mut UnifiedStrLarge,
+    ) -> bool;
+    fn boost_string_remove(map: *mut BoostStringMapOpaque, key: &UnifiedStr) -> bool;
+    fn boost_string_size(map: *mut BoostStringMapOpaque) -> i64;
+}
+
+pub struct BoostStringBackend {
+    map: Arc<*mut BoostStringMapOpaque>,
+}
+
+unsafe impl Send for BoostStringBackend {}
+unsafe impl Sync for BoostStringBackend {}
+
+impl Drop for BoostStringBackend {
+    fn drop(&mut self) {
+        if Arc::strong_count(&self.map) == 1 {
+            unsafe { free_boost_string_map(*self.map) };
+        }
+    }
+}
+
+fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
+    let mut data = [0u8; UNIFIED_STR_CAP];
+    let len = core::cmp::min(buf.len(), UNIFIED_STR_CAP);
+    data[..len].copy_from_slice(&buf[..len]);
+    UnifiedStr { data }
+}
+
+fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> UnifiedStrLarge {
+    let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
+    let len = core::cmp::min(buf.len(), UNIFIED_STR_LARGE_CAP);
+    data[..len].copy_from_slice(&buf[..len]);
+    UnifiedStrLarge { data }
+}
+
+impl StorageBackend for BoostStringBackend {
+    fn init(cap: usize) -> Self {
+        let map = unsafe { new_boost_string_map(cap) };
+        Self { map: Arc::new(map) }
+    }
+
+    fn get(&self, key: &KeyType) -> crate::cache::error::Result<Record> {
+        let ukey = bytes_to_unified_str(key);
+        let mut out = UnifiedStrLarge {
+            data: [0; UNIFIED_STR_LARGE_CAP],
+        };
+        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
+        if found {
+            Ok(Record {
+                header: CacheMetaData::new(0, 0, 0),
+                value: bytes::Bytes::copy_from_slice(&out.data),
+            })
+        } else {
+            Err(CacheError::NotFound)
+        }
+    }
+
+    fn remove(&self, key: &KeyType) -> Option<Record> {
+        let ukey = bytes_to_unified_str(key);
+        let mut out = UnifiedStrLarge {
+            data: [0; UNIFIED_STR_LARGE_CAP],
+        };
+        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
+        if !found {
+            return None;
+        }
+        let removed = unsafe { boost_string_remove(*self.map, &ukey) };
+        if removed {
+            Some(Record {
+                header: CacheMetaData::new(0, 0, 0),
+                value: bytes::Bytes::copy_from_slice(&out.data),
+            })
+        } else {
+            None
+        }
+    }
+
+    fn set(
+        &self,
+        key: KeyType,
+        mut record: Record,
+        peripherals: &Peripherals,
+    ) -> crate::cache::error::Result<SetStatus> {
+        let ukey = bytes_to_unified_str(&key);
+        let uval = bytes_to_unified_str_large(&record.value);
+        if record.header.cas > 0 {
+            record.header.cas += 1;
+            record.header.timestamp = peripherals.timestamp();
+            let ok = unsafe { boost_string_insert(*self.map, &ukey, &uval) };
+            if ok {
+                Ok(SetStatus {
+                    cas: record.header.cas,
+                })
+            } else {
+                Err(CacheError::KeyExists)
+            }
+        } else {
+            let _ = unsafe { boost_string_insert(*self.map, &ukey, &uval) };
+            Ok(SetStatus { cas: 0 })
+        }
+    }
+
+    fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
+        let ukey = bytes_to_unified_str(&key);
+        let mut out = UnifiedStrLarge {
+            data: [0; UNIFIED_STR_LARGE_CAP],
+        };
+        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
+        if !found {
+            return Err(CacheError::NotFound);
+        }
+        if header.cas != 0 {
+            return Err(CacheError::KeyExists);
+        }
+        let removed = unsafe { boost_string_remove(*self.map, &ukey) };
+        if removed {
+            Ok(Record {
+                header,
+                value: bytes::Bytes::copy_from_slice(&out.data),
+            })
+        } else {
+            Err(CacheError::NotFound)
+        }
+    }
+
+    fn flush(&self, _header: CacheMetaData) {}
+    fn len(&self) -> usize {
+        unsafe { boost_string_size(*self.map) as usize }
+    }
+    fn predict_keys(&self, _f: &mut CachePredicate) -> Vec<KeyType> {
+        Vec::new()
+    }
+}

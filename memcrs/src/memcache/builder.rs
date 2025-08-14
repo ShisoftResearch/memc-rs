@@ -12,6 +12,13 @@ use crate::memory_store::backends::lightning_copy::LightningCopyBackend;
 use crate::memory_store::backends::lightning_lock::LightningLockBackend;
 use crate::memory_store::backends::rw::RwMapBackend;
 use crate::memory_store::backends::scc::SccHashMapBackend;
+use crate::memory_store::backends::str_boost::BoostStringBackend;
+use crate::memory_store::backends::str_folly_cc::FollyStringBackend;
+use crate::memory_store::backends::str_libcuckoo::LibcuckooStringBackend;
+use crate::memory_store::backends::str_parlay::ParlayStringBackend;
+use crate::memory_store::backends::str_phmap::PhmapStringBackend;
+use crate::memory_store::backends::str_seqmap::SeqStringBackend;
+use crate::memory_store::backends::str_tbb::TbbStringBackend;
 use crate::memory_store::store::MemoryStore;
 use crate::server::timer;
 use std::cmp::max;
@@ -74,7 +81,14 @@ impl MemcacheStoreBuilder {
             Engine::Contrie => Arc::new(MemoryStore::<ContrieBackend>::new(timer, cap)),
             Engine::Flurry => Arc::new(MemoryStore::<FlurryMapBackend>::new(timer, cap)),
             Engine::RwLock => Arc::new(MemoryStore::<RwMapBackend>::new(timer, cap)),
-            Engine::LightningLock => Arc::new(MemoryStore::<LightningLockBackend>::new(timer, cap))
+            Engine::LightningLock => Arc::new(MemoryStore::<LightningLockBackend>::new(timer, cap)),
+            Engine::Phmap => Arc::new(MemoryStore::<PhmapStringBackend>::new(timer, cap)),
+            Engine::Boost => Arc::new(MemoryStore::<BoostStringBackend>::new(timer, cap)),
+            Engine::Tbb => Arc::new(MemoryStore::<TbbStringBackend>::new(timer, cap)),
+            Engine::FollyCc => Arc::new(MemoryStore::<FollyStringBackend>::new(timer, cap)),
+            Engine::Parlay => Arc::new(MemoryStore::<ParlayStringBackend>::new(timer, cap)),
+            Engine::Libcuckoo => Arc::new(MemoryStore::<LibcuckooStringBackend>::new(timer, cap)),
+            Engine::Seqmap => Arc::new(MemoryStore::<SeqStringBackend>::new(timer, cap)),
         }
     }
 }

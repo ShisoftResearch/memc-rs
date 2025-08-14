@@ -13,8 +13,15 @@ pub mod flurry;
 pub mod lightning;
 pub mod lightning_copy;
 pub mod lightning_lock;
-pub mod scc;
 pub mod rw;
+pub mod scc;
+pub mod str_boost;
+pub mod str_folly_cc;
+pub mod str_libcuckoo;
+pub mod str_parlay;
+pub mod str_phmap;
+pub mod str_seqmap;
+pub mod str_tbb;
 
 pub trait StorageBackend {
     fn init(cap: usize) -> Self;

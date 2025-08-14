@@ -45,6 +45,7 @@ rayon = "1.8.0"
 affinity = "0.1.2"
 bump-allocator = "0.1.2"
 flate2 = { version = "1.0.17", features = ["zlib-ng"], default-features = false }
+libc = "*"
 
 lockfree-cuckoohash = "0.1.0"
 concache = "0.2.1"
@@ -58,3 +59,6 @@ jemallocator = { version ="0.5.4", optional = true }
 
 [features]
 bumpallocator = []
+
+[build-dependencies]
+cc = "*"

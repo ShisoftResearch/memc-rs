@@ -51,8 +51,7 @@ impl Clone for Record {
     fn clone(&self) -> Self {
         Record {
             header: self.header.clone(),
-            // Do not clone value, avoid atomic operations
-            value: ValueType::new(), 
+            value: self.value.clone(),
         }
     }
 }

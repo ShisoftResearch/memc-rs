@@ -4,6 +4,7 @@ extern crate log;
 extern crate num_derive;
 pub mod cache;
 pub mod control_plane;
+pub mod ffi;
 pub mod memcache;
 pub mod memcache_server;
 pub mod memory_store;

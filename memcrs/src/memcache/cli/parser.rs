@@ -23,7 +23,14 @@ pub enum Engine {
     SccHashMap,
     Contrie,
     Flurry,
-    RwLock
+    RwLock,
+    Phmap,
+    Boost,
+    Tbb,
+    FollyCc,
+    Parlay,
+    Libcuckoo,
+    Seqmap,
 }
 
 impl RuntimeType {
