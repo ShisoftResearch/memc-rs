@@ -77,7 +77,7 @@ impl StorageBackend for ParlayStringBackend {
         if unsafe { get_string_kv(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) } {
             Ok(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)
@@ -94,7 +94,7 @@ impl StorageBackend for ParlayStringBackend {
         if unsafe { remove_string_kv(*self.map, &ukey) } {
             Some(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             None
@@ -138,7 +138,7 @@ impl StorageBackend for ParlayStringBackend {
         if unsafe { remove_string_kv(*self.map, &ukey) } {
             Ok(Record {
                 header,
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)

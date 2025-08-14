@@ -6,6 +6,10 @@
 #define UNIFIED_STR_CAP 32
 #define UNIFIED_STR_LARGE_CAP 32 // (1 * 1024) // 1KB
 
+// Reserve the last byte for length information
+#define UNIFIED_STR_DATA_CAP (UNIFIED_STR_CAP - 1)
+#define UNIFIED_STR_LARGE_DATA_CAP (UNIFIED_STR_LARGE_CAP - 1)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,10 +28,11 @@ typedef struct {
 struct UnifiedStrHash {
   size_t operator()(const UnifiedStr& s) const {
     // Optimized FNV-1a hash processing 8 bytes at a time for better performance
+    // Exclude the last byte (length byte) from hashing
     size_t h = 0xcbf29ce484222325;
     
     // Process 8 bytes at a time as uint64_t operations
-    const size_t full_chunks = UNIFIED_STR_CAP / 8;
+    const size_t full_chunks = UNIFIED_STR_DATA_CAP / 8;
     for (size_t chunk = 0; chunk < full_chunks; ++chunk) {
       // Read 8 bytes as uint64_t (assuming little-endian, which is most common)
       uint64_t chunk_data;
@@ -38,7 +43,7 @@ struct UnifiedStrHash {
     }
     
     // Process remaining bytes individually (0-7 bytes)
-    for (size_t i = full_chunks * 8; i < UNIFIED_STR_CAP; ++i) {
+    for (size_t i = full_chunks * 8; i < UNIFIED_STR_DATA_CAP; ++i) {
       h = (h ^ s.data[i]) * 0x100000001b3;
     }
     
@@ -58,8 +63,8 @@ struct UnifiedStrHash64 {
 
 struct UnifiedStrEqual {
   bool operator()(const UnifiedStr& a, const UnifiedStr& b) const {
-    //return std::memcmp(a.data, b.data, UNIFIED_STR_CAP) == 0;
-    return std::memcmp(a.data, b.data, UNIFIED_STR_CAP) == 0;
+    // Compare only the data bytes, excluding the length byte
+    return std::memcmp(a.data, b.data, UNIFIED_STR_DATA_CAP) == 0;
   }
 };
 
@@ -67,10 +72,11 @@ struct UnifiedStrEqual {
 struct UnifiedStrLargeHash {
   size_t operator()(const UnifiedStrLarge& s) const {
     // Optimized FNV-1a hash processing 8 bytes at a time for better performance
+    // Exclude the last byte (length byte) from hashing
     size_t h = 0xcbf29ce484222325;
     
     // Process 8 bytes at a time as uint64_t operations
-    const size_t full_chunks = UNIFIED_STR_LARGE_CAP / 8;
+    const size_t full_chunks = UNIFIED_STR_LARGE_DATA_CAP / 8;
     for (size_t chunk = 0; chunk < full_chunks; ++chunk) {
       // Read 8 bytes as uint64_t (assuming little-endian, which is most common)
       uint64_t chunk_data;
@@ -81,7 +87,7 @@ struct UnifiedStrLargeHash {
     }
     
     // Process remaining bytes individually (0-7 bytes)
-    for (size_t i = full_chunks * 8; i < UNIFIED_STR_LARGE_CAP; ++i) {
+    for (size_t i = full_chunks * 8; i < UNIFIED_STR_LARGE_DATA_CAP; ++i) {
       h = (h ^ s.data[i]) * 0x100000001b3;
     }
     
@@ -91,7 +97,8 @@ struct UnifiedStrLargeHash {
 
 struct UnifiedStrLargeEqual {
   bool operator()(const UnifiedStrLarge& a, const UnifiedStrLarge& b) const {
-    return std::memcmp(a.data, b.data, UNIFIED_STR_LARGE_CAP) == 0;
+    // Compare only the data bytes, excluding the length byte
+    return std::memcmp(a.data, b.data, UNIFIED_STR_LARGE_DATA_CAP) == 0;
   }
 };
 

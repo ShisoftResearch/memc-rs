@@ -54,11 +54,8 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
     UnifiedStr { data }
 }
 
-fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> UnifiedStrLarge {
-    let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
-    let len = core::cmp::min(buf.len(), UNIFIED_STR_LARGE_CAP);
-    data[..len].copy_from_slice(&buf[..len]);
-    UnifiedStrLarge { data }
+fn bytes_to_unified_str_large(record: &Record) -> UnifiedStrLarge {
+    UnifiedStrLarge::from_record(record)
 }
 
 impl StorageBackend for BoostStringBackend {
@@ -74,10 +71,7 @@ impl StorageBackend for BoostStringBackend {
         };
         let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
         if found {
-            Ok(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
-            })
+            out.to_record().ok_or(CacheError::NotFound)
         } else {
             Err(CacheError::NotFound)
         }
@@ -94,10 +88,7 @@ impl StorageBackend for BoostStringBackend {
         }
         let removed = unsafe { boost_string_remove(*self.map, &ukey) };
         if removed {
-            Some(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
-            })
+            out.to_record()
         } else {
             None
         }
@@ -110,7 +101,7 @@ impl StorageBackend for BoostStringBackend {
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<SetStatus> {
         let ukey = bytes_to_unified_str(&key);
-        let uval = bytes_to_unified_str_large(&record.value);
+        let uval = bytes_to_unified_str_large(&record);
         if record.header.cas > 0 {
             record.header.cas += 1;
             record.header.timestamp = peripherals.timestamp();
@@ -142,10 +133,12 @@ impl StorageBackend for BoostStringBackend {
         }
         let removed = unsafe { boost_string_remove(*self.map, &ukey) };
         if removed {
-            Ok(Record {
-                header,
-                value: bytes::Bytes::copy_from_slice(&out.data),
-            })
+            out.to_record()
+                .map(|mut record| {
+                    record.header = header;
+                    record
+                })
+                .ok_or(CacheError::NotFound)
         } else {
             Err(CacheError::NotFound)
         }

@@ -41,7 +41,7 @@ impl CacheMetaData {
 }
 
 /// Value and meta data stored in cache
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Record {
     pub(crate) header: CacheMetaData,
     pub(crate) value: ValueType,

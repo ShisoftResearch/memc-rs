@@ -1,6 +1,10 @@
 pub const UNIFIED_STR_CAP: usize = 32;
 pub const UNIFIED_STR_LARGE_CAP: usize = 32;
 
+// Reserve the last byte for length information
+pub const UNIFIED_STR_DATA_CAP: usize = UNIFIED_STR_CAP - 1;
+pub const UNIFIED_STR_LARGE_DATA_CAP: usize = UNIFIED_STR_LARGE_CAP - 1;
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct UnifiedStr {
@@ -14,6 +18,7 @@ pub struct UnifiedStrLarge {
 }
 
 use std::hash::{BuildHasher, Hash, Hasher};
+use crate::cache::cache::{Record, CacheMetaData};
 
 pub struct UnifiedStrHasher {
     state: u64,
@@ -90,8 +95,10 @@ impl UnifiedStr {
     #[inline]
     pub fn from_bytes(src: &[u8]) -> Self {
         let mut data = [0u8; UNIFIED_STR_CAP];
-        let len = core::cmp::min(src.len(), UNIFIED_STR_CAP);
+        let len = core::cmp::min(src.len(), UNIFIED_STR_DATA_CAP);
         data[..len].copy_from_slice(&src[..len]);
+        // Store the original length in the last byte
+        data[UNIFIED_STR_DATA_CAP] = len as u8;
         Self { data }
     }
     #[inline]
@@ -104,12 +111,13 @@ impl UnifiedStr {
     }
     #[inline]
     pub fn as_bytes_trimmed(&self) -> &[u8] {
-        let len = self
-            .data
-            .iter()
-            .position(|&b| b == 0)
-            .unwrap_or(UNIFIED_STR_CAP);
+        let stored_len = self.data[UNIFIED_STR_DATA_CAP] as usize;
+        let len = core::cmp::min(stored_len, UNIFIED_STR_DATA_CAP);
         &self.data[..len]
+    }
+    #[inline]
+    pub fn len_trimmed(&self) -> usize {
+        self.as_bytes_trimmed().len()
     }
 }
 
@@ -117,8 +125,10 @@ impl UnifiedStrLarge {
     #[inline]
     pub fn from_bytes(src: &[u8]) -> Self {
         let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
-        let len = core::cmp::min(src.len(), UNIFIED_STR_LARGE_CAP);
+        let len = core::cmp::min(src.len(), UNIFIED_STR_LARGE_DATA_CAP);
         data[..len].copy_from_slice(&src[..len]);
+        // Store the original length in the last byte
+        data[UNIFIED_STR_LARGE_DATA_CAP] = len as u8;
         Self { data }
     }
     #[inline]
@@ -131,15 +141,53 @@ impl UnifiedStrLarge {
     }
     #[inline]
     pub fn as_bytes_trimmed(&self) -> &[u8] {
-        let len = self
-            .data
-            .iter()
-            .position(|&b| b == 0)
-            .unwrap_or(UNIFIED_STR_LARGE_CAP);
+        let stored_len = self.data[UNIFIED_STR_LARGE_DATA_CAP] as usize;
+        let len = core::cmp::min(stored_len, UNIFIED_STR_LARGE_DATA_CAP);
         &self.data[..len]
     }
     #[inline]
     pub fn len_trimmed(&self) -> usize {
         self.as_bytes_trimmed().len()
+    }
+    
+    #[inline]
+    pub fn from_record(record: &Record) -> Self {
+        // Store only the value, but preserve the original length
+        let value_bytes = &record.value;
+        
+        let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
+        let len = core::cmp::min(value_bytes.len(), UNIFIED_STR_LARGE_DATA_CAP);
+        data[..len].copy_from_slice(&value_bytes[..len]);
+        // Store the original length in the last byte
+        data[UNIFIED_STR_LARGE_DATA_CAP] = len as u8;
+        Self { data }
+    }
+    
+    #[inline]
+    pub fn to_record(&self) -> Option<Record> {
+        let data = self.as_bytes_trimmed();
+        if data.is_empty() {
+            return None;
+        }
+        
+        // Create a Record with the value and default header
+        Some(Record {
+            header: CacheMetaData::new(0, 0, 0),
+            value: bytes::Bytes::copy_from_slice(data),
+        })
+    }
+    
+    #[inline]
+    pub fn to_record_with_header(&self, header: CacheMetaData) -> Option<Record> {
+        let data = self.as_bytes_trimmed();
+        if data.is_empty() {
+            return None;
+        }
+        
+        // Create a Record with the value and provided header
+        Some(Record {
+            header,
+            value: bytes::Bytes::copy_from_slice(data),
+        })
     }
 }

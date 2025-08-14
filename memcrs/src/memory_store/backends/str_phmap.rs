@@ -77,7 +77,7 @@ impl StorageBackend for PhmapStringBackend {
         if found {
             Ok(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)
@@ -98,7 +98,7 @@ impl StorageBackend for PhmapStringBackend {
         if removed {
             Some(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             None
@@ -154,7 +154,7 @@ impl StorageBackend for PhmapStringBackend {
         if removed {
             Ok(Record {
                 header,
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)

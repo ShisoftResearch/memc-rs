@@ -30,10 +30,7 @@ impl StorageBackend for LightningBackend {
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.get_ref(&ukey) {
-            Some(v) => Ok(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: Bytes::copy_from_slice(v.as_bytes()),
-            }),
+            Some(v) => v.to_record().ok_or(CacheError::NotFound),
             None => Err(CacheError::NotFound),
         }
     }
@@ -43,10 +40,7 @@ impl StorageBackend for LightningBackend {
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        self.0.remove_rt_ref(&ukey).map(|v| Record {
-            header: CacheMetaData::new(0, 0, 0),
-            value: Bytes::copy_from_slice(v.as_bytes()),
-        })
+        self.0.remove_rt_ref(&ukey).and_then(|v| v.to_record())
     }
 
     fn set(
@@ -55,8 +49,7 @@ impl StorageBackend for LightningBackend {
         mut record: crate::memcache::store::Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
-        // Normalize value through UnifiedStrLarge and store value-only
-        let uval = UnifiedStrLarge::from_bytes(&record.value);
+        let uval = UnifiedStrLarge::from_record(&record);
         let ukey = UnifiedStr::from_bytes(&key[..]);
         if record.header.cas > 0 {
             record.header.cas += 1;
@@ -80,9 +73,10 @@ impl StorageBackend for LightningBackend {
             return self
                 .0
                 .remove_rt_ref(&ukey)
-                .map(|v| Record {
-                    header,
-                    value: Bytes::copy_from_slice(v.as_bytes()),
+                .and_then(|v| v.to_record())
+                .map(|mut record| {
+                    record.header = header;
+                    record
                 })
                 .ok_or(CacheError::NotFound);
         } else {
@@ -109,10 +103,10 @@ impl StorageBackend for LightningBackend {
             .entries()
             .into_iter()
             .filter(|(k, v)| {
-                let rec = Record {
+                let rec = v.to_record().unwrap_or_else(|| Record {
                     header: CacheMetaData::new(0, 0, 0),
-                    value: Bytes::copy_from_slice(v.as_bytes()),
-                };
+                    value: Bytes::new(),
+                });
                 f(&Bytes::copy_from_slice(k.as_bytes_trimmed()), &rec)
             })
             .map(|(k, _v)| Bytes::copy_from_slice(k.as_bytes_trimmed()))

@@ -73,7 +73,7 @@ impl StorageBackend for LibcuckooStringBackend {
         if unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) } {
             Ok(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)
@@ -90,7 +90,7 @@ impl StorageBackend for LibcuckooStringBackend {
         if unsafe { cuckoo_string_remove(*self.map, &ukey) } {
             Some(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             None
@@ -134,7 +134,7 @@ impl StorageBackend for LibcuckooStringBackend {
         if unsafe { cuckoo_string_remove(*self.map, &ukey) } {
             Ok(Record {
                 header,
-                value: bytes::Bytes::copy_from_slice(&out.data),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)
