@@ -146,15 +146,15 @@ impl BinaryHandler {
         response_header: &mut binary::ResponseHeader,
     ) -> binary_codec::BinaryResponse {
         let record = store::Record::new(
-            request.value,
+            request.value.to_vec(),
             request.header.cas,
             request.flags,
             request.expiration,
         );
         let result = if self.is_add_command(request.header.opcode) {
-            self.storage.add(request.key, record)
+            self.storage.add(request.key.to_vec(), record)
         } else {
-            self.storage.replace(request.key, record)
+            self.storage.replace(request.key.to_vec(), record)
         };
 
         match result {
@@ -177,11 +177,11 @@ impl BinaryHandler {
         append_req: binary::AppendRequest,
         response_header: &mut binary::ResponseHeader,
     ) -> binary_codec::BinaryResponse {
-        let record = store::Record::new(append_req.value, append_req.header.cas, 0, 0);
+        let record = store::Record::new(append_req.value.to_vec(), append_req.header.cas, 0, 0);
         let result = if self.is_append(append_req.header.opcode) {
-            self.storage.append(append_req.key, record)
+            self.storage.append(append_req.key.to_vec(), record)
         } else {
-            self.storage.prepend(append_req.key, record)
+            self.storage.prepend(append_req.key.to_vec(), record)
         };
 
         match result {
@@ -205,13 +205,13 @@ impl BinaryHandler {
         response_header: &mut binary::ResponseHeader,
     ) -> binary_codec::BinaryResponse {
         let record = store::Record::new(
-            set_req.value,
+            set_req.value.to_vec(),
             set_req.header.cas,
             set_req.flags,
             set_req.expiration,
         );
 
-        match self.storage.set(set_req.key, record) {
+        match self.storage.set(set_req.key.to_vec(), record) {
             Ok(status) => {
                 response_header.cas = status.cas;
                 binary_codec::BinaryResponse::Set(binary::SetResponse {
@@ -228,7 +228,7 @@ impl BinaryHandler {
         response_header: &mut binary::ResponseHeader,
     ) -> binary_codec::BinaryResponse {
         let result = self.storage.delete(
-            delete_request.key,
+            delete_request.key.to_vec(),
             into_record_meta(&delete_request.header, 0),
         );
         match result {
@@ -244,7 +244,7 @@ impl BinaryHandler {
         get_request: binary::GetRequest,
         response_header: &mut binary::ResponseHeader,
     ) -> binary_codec::BinaryResponse {
-        let result = self.storage.get(&get_request.key);
+        let result = self.storage.get(&get_request.key.to_vec());
 
         match result {
             Ok(record) => {
@@ -262,7 +262,7 @@ impl BinaryHandler {
                     header: *response_header,
                     flags: record.header.flags,
                     key,
-                    value: record.value,
+                    value: record.value.into(),
                 })
             }
             Err(err) => storage_error_to_response(err, response_header),
@@ -297,7 +297,7 @@ impl BinaryHandler {
 
         let result = self.storage.increment(
             into_record_meta(&inc_request.header, inc_request.expiration),
-            inc_request.key,
+            inc_request.key.to_vec(),
             delta,
         );
         match result {
@@ -326,7 +326,7 @@ impl BinaryHandler {
 
         let result = self.storage.decrement(
             into_record_meta(&dec_request.header, dec_request.expiration),
-            dec_request.key,
+            dec_request.key.to_vec(),
             delta,
         );
         match result {
@@ -400,7 +400,7 @@ mod tests {
             key,
             flags: FLAGS,
             expiration: 0,
-            value,
+            value: value.into(),
         });
 
         let result = handler.handle_request(request);
@@ -482,7 +482,7 @@ mod tests {
         let key = Bytes::from("test_key");
         let value = from_string("test value");
 
-        insert_value(&handler, key.clone(), value.clone());
+        insert_value(&handler, key.clone(), value.clone().into());
 
         let header = create_header(binary::Command::GetKey, &key);
         let request = binary_codec::BinaryRequest::GetKey(binary::GetKeyRequest {
@@ -520,7 +520,7 @@ mod tests {
         let key = Bytes::from("test_key");
         let value = from_string("test value");
 
-        insert_value(&handler, key.clone(), value.clone());
+        insert_value(&handler, key.clone(), value.clone().into());
 
         let header = create_header(binary::Command::GetKeyQuiet, &key);
         let request = binary_codec::BinaryRequest::GetKeyQuietly(binary::GetKeyQuietRequest {
@@ -561,7 +561,7 @@ mod tests {
         let value = from_string("value");
         let record = store::Record::new(value.clone(), 0, FLAGS, 0);
 
-        let set_result = handler.storage.set(key.clone(), record);
+        let set_result = handler.storage.set(key.to_vec(), record);
         assert!(set_result.is_ok());
 
         let request = binary_codec::BinaryRequest::Get(binary::GetRequest { header, key });
@@ -601,7 +601,7 @@ mod tests {
             flags: FLAGS,
             expiration: 0,
             key,
-            value,
+            value: value.into(),
         });
         let result = handler.handle_request(request);
         match result {
@@ -629,7 +629,7 @@ mod tests {
             flags: FLAGS,
             expiration: 0,
             key,
-            value,
+            value: value.into(),
         });
         let result = handler.handle_request(request);
         match result {
@@ -666,7 +666,7 @@ mod tests {
             flags: FLAGS,
             expiration: 0,
             key: key.clone(),
-            value: value.clone(),
+            value: value.clone().into(),
         });
 
         let result = handler.handle_request(request);
@@ -688,7 +688,7 @@ mod tests {
             flags: FLAGS,
             expiration: 0,
             key,
-            value,
+            value: value.into(),
         });
 
         let result = handler.handle_request(request);
@@ -784,7 +784,7 @@ mod tests {
         let handler = create_handler();
         let key = Bytes::from("counter");
         let value = from_string("100");
-        insert_value(&handler, key.clone(), value);
+        insert_value(&handler, key.clone(), value.into());
 
         let header = create_header(binary::Command::Increment, &key);
         let request = binary_codec::BinaryRequest::Increment(binary::IncrementRequest {
@@ -823,7 +823,7 @@ mod tests {
         let handler = create_handler();
         let key = Bytes::from("counter");
         let value = from_string("100");
-        insert_value(&handler, key.clone(), value);
+        insert_value(&handler, key.clone(), value.into());
 
         let header = create_header(binary::Command::IncrementQuiet, &key);
         let request = binary_codec::BinaryRequest::IncrementQuiet(binary::IncrementRequest {
@@ -887,7 +887,7 @@ mod tests {
         let handler = create_handler();
         let key = Bytes::from("counter");
         let value = from_string("100");
-        insert_value(&handler, key.clone(), value);
+        insert_value(&handler, key.clone(), value.into());
 
         let header = create_header(binary::Command::Decrement, &key);
         let request = binary_codec::BinaryRequest::Decrement(binary::DecrementRequest {
@@ -926,7 +926,7 @@ mod tests {
         let handler = create_handler();
         let key = Bytes::from("counter");
         let value = from_string("100");
-        insert_value(&handler, key.clone(), value);
+        insert_value(&handler, key.clone(), value.into());
 
         let header = create_header(binary::Command::DecrementQuiet, &key);
         let request = binary_codec::BinaryRequest::DecrementQuiet(binary::DecrementRequest {
@@ -1023,7 +1023,7 @@ mod tests {
         let value = from_string("test value");
         for key_suffix in 0..100 {
             let key = Bytes::from(String::from("test_key") + &key_suffix.to_string());
-            insert_value(&handler, key.clone(), value.clone());
+            insert_value(&handler, key.clone(), value.clone().into());
         }
 
         let key = String::from("").into_bytes();
@@ -1051,7 +1051,7 @@ mod tests {
         let handler = create_handler();
         let value = from_string("test value");
         let key = Bytes::from("test_key");
-        insert_value(&handler, key.clone(), value.clone());
+        insert_value(&handler, key.clone(), value.clone().into());
 
         let header = create_header(binary::Command::Delete, &key);
         let request = binary_codec::BinaryRequest::Delete(binary::DeleteRequest {

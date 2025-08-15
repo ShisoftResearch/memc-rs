@@ -1,4 +1,4 @@
-use bytes::Bytes;
+
 use lockfree_cuckoohash::*;
 
 use crate::{cache::error::CacheError, memcache::store::*, memory_store::store::Peripherals};
@@ -28,7 +28,7 @@ impl StorageBackend for CuckooBackend {
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
         if self.0.remove(key) {
-            return Some(Record::new(Bytes::new(), 0, 0, 0));
+            return Some(Record::new(Vec::new(), 0, 0, 0));
         } else {
             return None;
         }

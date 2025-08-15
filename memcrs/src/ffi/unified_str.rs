@@ -173,7 +173,7 @@ impl UnifiedStrLarge {
         // Create a Record with the value and default header
         Some(Record {
             header: CacheMetaData::new(0, 0, 0),
-            value: bytes::Bytes::copy_from_slice(data),
+            value: data.to_vec(),
         })
     }
     
@@ -187,7 +187,7 @@ impl UnifiedStrLarge {
         // Create a Record with the value and provided header
         Some(Record {
             header,
-            value: bytes::Bytes::copy_from_slice(data),
+            value: data.to_vec(),
         })
     }
 }

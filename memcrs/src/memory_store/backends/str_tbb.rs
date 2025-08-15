@@ -57,7 +57,7 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
     data[..len].copy_from_slice(&buf[..len]);
     UnifiedStr { data }
 }
-fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> UnifiedStrLarge {
+fn bytes_to_unified_str_large(buf: &[u8]) -> UnifiedStrLarge {
     let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
     let len = core::cmp::min(buf.len(), UNIFIED_STR_LARGE_CAP);
     data[..len].copy_from_slice(&buf[..len]);
@@ -77,7 +77,7 @@ impl StorageBackend for TbbStringBackend {
         if unsafe { tbb_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) } {
             Ok(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
+                value: out.as_bytes_trimmed().to_vec(),
             })
         } else {
             Err(CacheError::NotFound)
@@ -94,7 +94,7 @@ impl StorageBackend for TbbStringBackend {
         if unsafe { tbb_string_remove(*self.map, &ukey) } {
             Some(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
+                value: out.as_bytes_trimmed().to_vec(),
             })
         } else {
             None
@@ -138,7 +138,7 @@ impl StorageBackend for TbbStringBackend {
         if unsafe { tbb_string_remove(*self.map, &ukey) } {
             Ok(Record {
                 header,
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
+                value: out.as_bytes_trimmed().to_vec(),
             })
         } else {
             Err(CacheError::NotFound)

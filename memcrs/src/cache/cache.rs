@@ -1,12 +1,11 @@
 use super::error::{CacheError, Result};
-use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
 /// Cache key type
-pub type KeyType = Bytes;
+pub type KeyType = Vec<u8>;
 
 /// Cache value associated with a key
-pub type ValueType = Bytes;
+pub type ValueType = Vec<u8>;
 
 /// Meta data stored with cache value
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -1,4 +1,4 @@
-use bytes::{Bytes, BytesMut};
+
 
 use crate::cache::cache::{
     Cache, CacheMetaData as CacheMeta, KeyType as CacheKeyType, Record as CacheRecord,
@@ -71,11 +71,10 @@ impl MemcStore {
         match self.get(&key) {
             Ok(mut record) => {
                 record.header.cas = new_record.header.cas;
-                let mut value =
-                    BytesMut::with_capacity(record.value.len() + new_record.value.len());
+                let mut value = Vec::with_capacity(record.value.len() + new_record.value.len());
                 value.extend_from_slice(&record.value);
                 value.extend_from_slice(&new_record.value);
-                record.value = value.freeze();
+                record.value = value;
                 self.set(key, record)
             }
             Err(_err) => Err(CacheError::NotFound),
@@ -85,11 +84,10 @@ impl MemcStore {
     pub fn prepend(&self, key: KeyType, new_record: Record) -> Result<SetStatus> {
         match self.get(&key) {
             Ok(mut record) => {
-                let mut value =
-                    BytesMut::with_capacity(record.value.len() + new_record.value.len());
+                let mut value = Vec::with_capacity(record.value.len() + new_record.value.len());
                 value.extend_from_slice(&new_record.value);
                 value.extend_from_slice(&record.value);
-                record.value = value.freeze();
+                record.value = value;
                 record.header.cas = new_record.header.cas;
                 self.set(key, record)
             }
@@ -143,7 +141,7 @@ impl MemcStore {
                         } else {
                             value -= delta.delta;
                         }
-                        record.value = Bytes::from(value.to_string());
+                        record.value = value.to_string().into_bytes();
                         record.header = header;
                         self.set(key, record).map(|result| DeltaResult {
                             cas: result.cas,
@@ -158,7 +156,7 @@ impl MemcStore {
             Err(_err) => {
                 if header.get_expiration() != 0xffffffff {
                     let record = Record::new(
-                        Bytes::from(delta.value.to_string()),
+                        delta.value.to_string().into_bytes(),
                         0,
                         0,
                         header.get_expiration(),
