@@ -1,3 +1,4 @@
+use std::mem;
 use std::sync::Arc;
 
 use crate::cache::error::CacheError;
@@ -47,20 +48,6 @@ impl Drop for PhmapStringBackend {
     }
 }
 
-fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
-    let mut data = [0u8; UNIFIED_STR_CAP];
-    let len = core::cmp::min(buf.len(), UNIFIED_STR_CAP);
-    data[..len].copy_from_slice(&buf[..len]);
-    UnifiedStr { data }
-}
-
-fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> MapValue {
-    let mut data = [0u8; MAP_VAL_BUFFER_CAP];
-    let len = core::cmp::min(buf.len(), MAP_VAL_BUFFER_CAP);
-    data[..len].copy_from_slice(&buf[..len]);
-    MapValue { data }
-}
-
 impl StorageBackend for PhmapStringBackend {
     fn init(cap: usize) -> Self {
         let map = unsafe { new_parallel_string_map(cap) };
@@ -68,24 +55,24 @@ impl StorageBackend for PhmapStringBackend {
     }
 
     fn get(&self, key: &KeyType) -> crate::cache::error::Result<Record> {
-        let ukey = bytes_to_unified_str(key);
+        let ukey = UnifiedStr::from_bytes(key);
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
         let found =
             unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if found {
-            Ok(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
-            })
+            let shadow = out.to_record();
+            let val = shadow.clone();
+            mem::forget(shadow);
+            Ok(val)
         } else {
             Err(CacheError::NotFound)
         }
     }
 
     fn remove(&self, key: &KeyType) -> Option<Record> {
-        let ukey = bytes_to_unified_str(key);
+        let ukey = UnifiedStr::from_bytes(key);
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
@@ -96,10 +83,7 @@ impl StorageBackend for PhmapStringBackend {
         }
         let removed = unsafe { parallel_string_remove(*self.map, &ukey) };
         if removed {
-            Some(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
-            })
+            Some(out.to_record())
         } else {
             None
         }
@@ -111,22 +95,24 @@ impl StorageBackend for PhmapStringBackend {
         mut record: Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<SetStatus> {
-        let ukey = bytes_to_unified_str(&key);
-        let uval = bytes_to_unified_str_large(&record.value);
+        let ukey = UnifiedStr::from_bytes(&key);
         if record.header.cas > 0 {
             // Emulate CAS: get existing value and only insert if cas matches; we cannot read CAS from FFI store
             // For benchmarking, just bump CAS and write.
             record.header.cas += 1;
             record.header.timestamp = peripherals.timestamp();
+            let cas = record.header.cas;
+            let uval = MapValue::from_record(record);
             let ok = unsafe { parallel_string_insert(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
-                    cas: record.header.cas,
+                    cas,
                 })
             } else {
                 Err(CacheError::KeyExists)
             }
         } else {
+            let uval = MapValue::from_record(record);
             let ok = unsafe { parallel_string_insert(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus { cas: 0 })
@@ -137,7 +123,7 @@ impl StorageBackend for PhmapStringBackend {
     }
 
     fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
-        let ukey = bytes_to_unified_str(&key);
+        let ukey = UnifiedStr::from_bytes(&key);
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
@@ -152,10 +138,7 @@ impl StorageBackend for PhmapStringBackend {
         }
         let removed = unsafe { parallel_string_remove(*self.map, &ukey) };
         if removed {
-            Ok(Record {
-                header,
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
-            })
+            Ok(out.to_record())
         } else {
             Err(CacheError::NotFound)
         }

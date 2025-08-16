@@ -1,3 +1,4 @@
+use std::mem;
 use std::sync::Arc;
 
 use crate::cache::error::CacheError;
@@ -51,40 +52,27 @@ impl Drop for FollyStringBackend {
     }
 }
 
-fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
-    let mut data = [0u8; UNIFIED_STR_CAP];
-    let len = core::cmp::min(buf.len(), UNIFIED_STR_CAP);
-    data[..len].copy_from_slice(&buf[..len]);
-    UnifiedStr { data }
-}
-fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> MapValue {
-    let mut data = [0u8; MAP_VAL_BUFFER_CAP];
-    let len = core::cmp::min(buf.len(), MAP_VAL_BUFFER_CAP);
-    data[..len].copy_from_slice(&buf[..len]);
-    MapValue { data }
-}
-
 impl StorageBackend for FollyStringBackend {
     fn init(cap: usize) -> Self {
         let map = unsafe { new_folly_string_map(cap) };
         Self { map: Arc::new(map) }
     }
     fn get(&self, key: &KeyType) -> crate::cache::error::Result<Record> {
-        let ukey = bytes_to_unified_str(key);
+        let ukey = UnifiedStr::from_bytes(key);
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
         if unsafe { folly_string_get(*self.map, &ukey, &mut out as *mut MapValue) } {
-            Ok(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
-            })
+            let shadow = out.to_record();
+            let val = shadow.clone();
+            mem::forget(shadow);
+            Ok(val)
         } else {
             Err(CacheError::NotFound)
         }
     }
     fn remove(&self, key: &KeyType) -> Option<Record> {
-        let ukey = bytes_to_unified_str(key);
+        let ukey = UnifiedStr::from_bytes(key);
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
@@ -92,10 +80,7 @@ impl StorageBackend for FollyStringBackend {
             return None;
         }
         if unsafe { folly_string_remove(*self.map, &ukey) } {
-            Some(Record {
-                header: CacheMetaData::new(0, 0, 0),
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
-            })
+            Some(out.to_record())
         } else {
             None
         }
@@ -106,26 +91,28 @@ impl StorageBackend for FollyStringBackend {
         mut record: Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<SetStatus> {
-        let ukey = bytes_to_unified_str(&key);
-        let uval = bytes_to_unified_str_large(&record.value);
+        let ukey = UnifiedStr::from_bytes(&key);
         if record.header.cas > 0 {
             record.header.cas += 1;
             record.header.timestamp = peripherals.timestamp();
+            let cas = record.header.cas;
+            let uval = MapValue::from_record(record);
             let ok = unsafe { folly_string_update(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
-                    cas: record.header.cas,
+                    cas,
                 })
             } else {
                 Err(CacheError::KeyExists)
             }
         } else {
+            let uval = MapValue::from_record(record);
             let _ = unsafe { folly_string_insert(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }
     fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
-        let ukey = bytes_to_unified_str(&key);
+        let ukey = UnifiedStr::from_bytes(&key);
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
@@ -136,10 +123,9 @@ impl StorageBackend for FollyStringBackend {
             return Err(CacheError::KeyExists);
         }
         if unsafe { folly_string_remove(*self.map, &ukey) } {
-            Ok(Record {
-                header,
-                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
-            })
+            let mut record = out.to_record();
+            record.header = header;
+            Ok(record)
         } else {
             Err(CacheError::NotFound)
         }

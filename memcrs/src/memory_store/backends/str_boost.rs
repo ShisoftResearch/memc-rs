@@ -1,3 +1,4 @@
+use std::mem;
 use std::sync::Arc;
 
 use crate::cache::error::CacheError;
@@ -54,10 +55,6 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
     UnifiedStr { data }
 }
 
-fn bytes_to_unified_str_large(record: &Record) -> MapValue {
-    MapValue::from_record(record)
-}
-
 impl StorageBackend for BoostStringBackend {
     fn init(cap: usize) -> Self {
         let map = unsafe { new_boost_string_map(cap) };
@@ -71,7 +68,10 @@ impl StorageBackend for BoostStringBackend {
         };
         let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if found {
-            out.to_record().ok_or(CacheError::NotFound)
+            let shadow = out.to_record();
+            let val = shadow.clone();
+            mem::forget(shadow);
+            Ok(val)
         } else {
             Err(CacheError::NotFound)
         }
@@ -88,7 +88,7 @@ impl StorageBackend for BoostStringBackend {
         }
         let removed = unsafe { boost_string_remove(*self.map, &ukey) };
         if removed {
-            out.to_record()
+            Some(out.to_record())
         } else {
             None
         }
@@ -101,19 +101,21 @@ impl StorageBackend for BoostStringBackend {
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<SetStatus> {
         let ukey = bytes_to_unified_str(&key);
-        let uval = bytes_to_unified_str_large(&record);
         if record.header.cas > 0 {
             record.header.cas += 1;
             record.header.timestamp = peripherals.timestamp();
+            let cas = record.header.cas;
+            let uval = MapValue::from_record(record);
             let ok = unsafe { boost_string_insert(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
-                    cas: record.header.cas,
+                    cas,
                 })
             } else {
                 Err(CacheError::KeyExists)
             }
         } else {
+            let uval = MapValue::from_record(record);
             let _ = unsafe { boost_string_insert(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
@@ -133,12 +135,9 @@ impl StorageBackend for BoostStringBackend {
         }
         let removed = unsafe { boost_string_remove(*self.map, &ukey) };
         if removed {
-            out.to_record()
-                .map(|mut record| {
-                    record.header = header;
-                    record
-                })
-                .ok_or(CacheError::NotFound)
+            let mut record = out.to_record();
+            record.header = header;
+            Ok(record)
         } else {
             Err(CacheError::NotFound)
         }

@@ -1,5 +1,5 @@
 pub const UNIFIED_STR_CAP: usize = 32;
-pub const MAP_VAL_BUFFER_CAP: usize = 32;
+pub const MAP_VAL_BUFFER_CAP: usize = std::mem::size_of::<Record>();
 
 // Reserve the last byte for length information
 pub const UNIFIED_STR_DATA_CAP: usize = UNIFIED_STR_CAP - 1;
@@ -17,7 +17,7 @@ pub struct MapValue {
     pub data: [u8; MAP_VAL_BUFFER_CAP],
 }
 
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::{hash::{BuildHasher, Hash, Hasher}, ptr};
 use crate::cache::cache::{Record, CacheMetaData};
 
 pub struct UnifiedStrHasher {
@@ -117,71 +117,20 @@ impl UnifiedStr {
 
 impl MapValue {
     #[inline]
-    pub fn from_bytes(src: &[u8]) -> Self {
-        let mut data = [0u8; MAP_VAL_BUFFER_CAP];
-        let len = core::cmp::min(src.len(), MAP_VAL_DATA_CAP);
-        data[..len].copy_from_slice(&src[..len]);
-        // Store the original length in the last byte
-        data[MAP_VAL_DATA_CAP] = len as u8;
-        Self { data }
-    }
-    #[inline]
-    pub fn from_str(s: &str) -> Self {
-        Self::from_bytes(s.as_bytes())
-    }
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.data
-    }
-    #[inline]
-    pub fn as_bytes_trimmed(&self) -> &[u8] {
-        let stored_len = self.data[MAP_VAL_DATA_CAP] as usize;
-        let len = core::cmp::min(stored_len, MAP_VAL_DATA_CAP);
-        &self.data[..len]
-    }
-    #[inline]
-    pub fn len_trimmed(&self) -> usize {
-        self.as_bytes_trimmed().len()
-    }
-    
-    #[inline]
-    pub fn from_record(record: &Record) -> Self {
-        // Store only the value, but preserve the original length
-        let value_bytes = &record.value;
-        
-        let mut data = [0u8; MAP_VAL_BUFFER_CAP];
-        let len = core::cmp::min(value_bytes.len(), MAP_VAL_DATA_CAP);
-        data[..len].copy_from_slice(&value_bytes[..len]);
-        // Store the original length in the last byte
-        data[MAP_VAL_DATA_CAP] = len as u8;
-        Self { data }
-    }
-    
-    #[inline]
-    pub fn to_record(&self) -> Option<Record> {
-        let data = self.as_bytes_trimmed();
-        if data.is_empty() {
-            return None;
+    pub fn from_record(record: Record) -> Self {
+        let mut buffer = Self {
+            data: [0u8; MAP_VAL_BUFFER_CAP],
+        };
+        unsafe {
+            ptr::write(&mut buffer.data as *mut [u8; MAP_VAL_BUFFER_CAP] as *mut Record, record);
         }
-        
-        // Create a Record with the value and default header
-        Some(Record {
-            header: CacheMetaData::new(0, 0, 0),
-            value: bytes::Bytes::copy_from_slice(data),
-        })
+        return buffer;
     }
     
     #[inline]
-    pub fn to_record_with_header(&self, header: CacheMetaData) -> Option<Record> {
-        let data = self.as_bytes_trimmed();
-        if data.is_empty() {
-            return None;
+    pub fn to_record(&self) -> Record {
+        unsafe {
+            return ptr::read(&self.data as *const [u8; MAP_VAL_BUFFER_CAP] as *const Record);
         }
-        
-        // Create a Record with the value and provided header
-        Some(Record {
-            header,
-            value: bytes::Bytes::copy_from_slice(data),
-        })
     }
 }

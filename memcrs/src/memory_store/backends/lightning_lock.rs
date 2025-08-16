@@ -1,4 +1,4 @@
-use std::alloc::System;
+use std::{alloc::System, mem};
 
 use lightning::map::{LockingHashMap, Map};
 
@@ -32,7 +32,12 @@ impl StorageBackend for LightningLockBackend {
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.get(&ukey) {
-            Some(v) => v.to_record().ok_or(CacheError::NotFound),
+            Some(v) => {
+                let shadow = v.to_record();
+                let val = shadow.clone();
+                mem::forget(shadow);
+                Ok(val)
+            },
             None => Err(CacheError::NotFound),
         }
     }
@@ -42,7 +47,7 @@ impl StorageBackend for LightningLockBackend {
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        self.0.remove(&ukey).and_then(|v| v.to_record())
+        self.0.remove(&ukey).map(|v| v.to_record())
     }
 
     fn set(
@@ -51,15 +56,16 @@ impl StorageBackend for LightningLockBackend {
         mut record: crate::memcache::store::Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
-        let uval = MapValue::from_record(&record);
         let ukey = UnifiedStr::from_bytes(&key[..]);
         if record.header.cas > 0 {
             record.header.cas += 1;
             record.header.timestamp = peripherals.timestamp();
             let cas = record.header.cas;
+            let uval = MapValue::from_record(record);
             self.0.insert(ukey, uval);
             Ok(crate::cache::cache::SetStatus { cas })
         } else {
+            let uval = MapValue::from_record(record);
             self.0.insert(ukey, uval);
             Ok(crate::cache::cache::SetStatus { cas: 0 })
         }
@@ -75,7 +81,7 @@ impl StorageBackend for LightningLockBackend {
             return self
                 .0
                 .remove(&ukey)
-                .and_then(|v| v.to_record())
+                .map(|v| v.to_record())
                 .map(|mut record| {
                     record.header = header;
                     record
@@ -102,10 +108,7 @@ impl StorageBackend for LightningLockBackend {
             .entries()
             .into_iter()
             .filter(|(k, v)| {
-                let rec = v.to_record().unwrap_or_else(|| Record {
-                    header: CacheMetaData::new(0, 0, 0),
-                    value: Bytes::new(),
-                });
+                let rec = v.to_record();
                 f(&Bytes::copy_from_slice(k.as_bytes_trimmed()), &rec)
             })
             .map(|(k, _v)| Bytes::copy_from_slice(k.as_bytes_trimmed()))

@@ -4,7 +4,7 @@
 #include <cstring>
 
 #define UNIFIED_STR_CAP 32
-#define MAP_VAL_BUFFER_CAP 32 // (1 * 1024) // 1KB
+#define MAP_VAL_BUFFER_CAP 48 // sizeof(Record) in Rust
 
 // Reserve the last byte for length information
 #define UNIFIED_STR_DATA_CAP (UNIFIED_STR_CAP - 1)
