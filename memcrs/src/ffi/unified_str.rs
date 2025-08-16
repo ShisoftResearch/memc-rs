@@ -1,9 +1,9 @@
 pub const UNIFIED_STR_CAP: usize = 32;
-pub const UNIFIED_STR_LARGE_CAP: usize = 32;
+pub const MAP_VAL_BUFFER_CAP: usize = 32;
 
 // Reserve the last byte for length information
 pub const UNIFIED_STR_DATA_CAP: usize = UNIFIED_STR_CAP - 1;
-pub const UNIFIED_STR_LARGE_DATA_CAP: usize = UNIFIED_STR_LARGE_CAP - 1;
+pub const MAP_VAL_DATA_CAP: usize = MAP_VAL_BUFFER_CAP - 1;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
@@ -14,7 +14,7 @@ pub struct UnifiedStr {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub struct MapValue {
-    pub data: [u8; UNIFIED_STR_LARGE_CAP],
+    pub data: [u8; MAP_VAL_BUFFER_CAP],
 }
 
 use std::hash::{BuildHasher, Hash, Hasher};
@@ -124,11 +124,11 @@ impl UnifiedStr {
 impl MapValue {
     #[inline]
     pub fn from_bytes(src: &[u8]) -> Self {
-        let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
-        let len = core::cmp::min(src.len(), UNIFIED_STR_LARGE_DATA_CAP);
+        let mut data = [0u8; MAP_VAL_BUFFER_CAP];
+        let len = core::cmp::min(src.len(), MAP_VAL_DATA_CAP);
         data[..len].copy_from_slice(&src[..len]);
         // Store the original length in the last byte
-        data[UNIFIED_STR_LARGE_DATA_CAP] = len as u8;
+        data[MAP_VAL_DATA_CAP] = len as u8;
         Self { data }
     }
     #[inline]
@@ -141,8 +141,8 @@ impl MapValue {
     }
     #[inline]
     pub fn as_bytes_trimmed(&self) -> &[u8] {
-        let stored_len = self.data[UNIFIED_STR_LARGE_DATA_CAP] as usize;
-        let len = core::cmp::min(stored_len, UNIFIED_STR_LARGE_DATA_CAP);
+        let stored_len = self.data[MAP_VAL_DATA_CAP] as usize;
+        let len = core::cmp::min(stored_len, MAP_VAL_DATA_CAP);
         &self.data[..len]
     }
     #[inline]
@@ -155,11 +155,11 @@ impl MapValue {
         // Store only the value, but preserve the original length
         let value_bytes = &record.value;
         
-        let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
-        let len = core::cmp::min(value_bytes.len(), UNIFIED_STR_LARGE_DATA_CAP);
+        let mut data = [0u8; MAP_VAL_BUFFER_CAP];
+        let len = core::cmp::min(value_bytes.len(), MAP_VAL_DATA_CAP);
         data[..len].copy_from_slice(&value_bytes[..len]);
         // Store the original length in the last byte
-        data[UNIFIED_STR_LARGE_DATA_CAP] = len as u8;
+        data[MAP_VAL_DATA_CAP] = len as u8;
         Self { data }
     }
     

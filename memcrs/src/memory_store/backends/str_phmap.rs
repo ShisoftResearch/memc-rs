@@ -9,7 +9,7 @@ use crate::{
 
 use super::StorageBackend;
 use crate::ffi::unified_str::{
-    UnifiedStr, MapValue, UNIFIED_STR_CAP, UNIFIED_STR_LARGE_CAP,
+    UnifiedStr, MapValue, UNIFIED_STR_CAP, MAP_VAL_BUFFER_CAP,
 };
 
 #[repr(C)]
@@ -55,8 +55,8 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
 }
 
 fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> MapValue {
-    let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
-    let len = core::cmp::min(buf.len(), UNIFIED_STR_LARGE_CAP);
+    let mut data = [0u8; MAP_VAL_BUFFER_CAP];
+    let len = core::cmp::min(buf.len(), MAP_VAL_BUFFER_CAP);
     data[..len].copy_from_slice(&buf[..len]);
     MapValue { data }
 }
@@ -70,7 +70,7 @@ impl StorageBackend for PhmapStringBackend {
     fn get(&self, key: &KeyType) -> crate::cache::error::Result<Record> {
         let ukey = bytes_to_unified_str(key);
         let mut out = MapValue {
-            data: [0; UNIFIED_STR_LARGE_CAP],
+            data: [0; MAP_VAL_BUFFER_CAP],
         };
         let found =
             unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
@@ -87,7 +87,7 @@ impl StorageBackend for PhmapStringBackend {
     fn remove(&self, key: &KeyType) -> Option<Record> {
         let ukey = bytes_to_unified_str(key);
         let mut out = MapValue {
-            data: [0; UNIFIED_STR_LARGE_CAP],
+            data: [0; MAP_VAL_BUFFER_CAP],
         };
         let found =
             unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
@@ -139,7 +139,7 @@ impl StorageBackend for PhmapStringBackend {
     fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
         let ukey = bytes_to_unified_str(&key);
         let mut out = MapValue {
-            data: [0; UNIFIED_STR_LARGE_CAP],
+            data: [0; MAP_VAL_BUFFER_CAP],
         };
         let found =
             unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };

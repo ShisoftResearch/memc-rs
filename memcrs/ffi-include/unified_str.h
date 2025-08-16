@@ -4,11 +4,11 @@
 #include <cstring>
 
 #define UNIFIED_STR_CAP 32
-#define UNIFIED_STR_LARGE_CAP 32 // (1 * 1024) // 1KB
+#define MAP_VAL_BUFFER_CAP 32 // (1 * 1024) // 1KB
 
 // Reserve the last byte for length information
 #define UNIFIED_STR_DATA_CAP (UNIFIED_STR_CAP - 1)
-#define UNIFIED_STR_LARGE_DATA_CAP (UNIFIED_STR_LARGE_CAP - 1)
+#define MAP_VAL_DATA_CAP (MAP_VAL_BUFFER_CAP - 1)
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +19,7 @@ typedef struct {
 } UnifiedStr;
 
 typedef struct {
-    uint8_t data[UNIFIED_STR_LARGE_CAP];
+    uint8_t data[MAP_VAL_BUFFER_CAP];
 } MapValue;
 
 #ifdef __cplusplus
@@ -76,7 +76,7 @@ struct MapValueHash {
     size_t h = 0xcbf29ce484222325;
     
     // Process 8 bytes at a time as uint64_t operations
-    const size_t full_chunks = UNIFIED_STR_LARGE_DATA_CAP / 8;
+    const size_t full_chunks = MAP_VAL_DATA_CAP / 8;
     for (size_t chunk = 0; chunk < full_chunks; ++chunk) {
       // Read 8 bytes as uint64_t (assuming little-endian, which is most common)
       uint64_t chunk_data;
@@ -87,7 +87,7 @@ struct MapValueHash {
     }
     
     // Process remaining bytes individually (0-7 bytes)
-    for (size_t i = full_chunks * 8; i < UNIFIED_STR_LARGE_DATA_CAP; ++i) {
+    for (size_t i = full_chunks * 8; i < MAP_VAL_DATA_CAP; ++i) {
       h = (h ^ s.data[i]) * 0x100000001b3;
     }
     
@@ -98,7 +98,7 @@ struct MapValueHash {
 struct MapValueEqual {
   bool operator()(const MapValue& a, const MapValue& b) const {
     // Compare only the data bytes, excluding the length byte
-    return std::memcmp(a.data, b.data, UNIFIED_STR_LARGE_DATA_CAP) == 0;
+    return std::memcmp(a.data, b.data, MAP_VAL_DATA_CAP) == 0;
   }
 };
 
