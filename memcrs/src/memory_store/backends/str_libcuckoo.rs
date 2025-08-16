@@ -19,7 +19,7 @@ pub struct CuckooStringMapOpaque;
 extern "C" {
     fn new_cuckoo_string_map(capacity: usize) -> *mut CuckooStringMapOpaque;
     fn free_cuckoo_string_map(map: *mut CuckooStringMapOpaque);
-    fn cuckoo_string_update(
+    fn cuckoo_string_insert(
         map: *mut CuckooStringMapOpaque,
         key: &UnifiedStr,
         value: &MapValue,
@@ -93,7 +93,7 @@ impl StorageBackend for LibcuckooStringBackend {
             record.header.timestamp = peripherals.timestamp();
             let cas = record.header.cas;
             let uval = MapValue::from_record(record);
-            let ok = unsafe { cuckoo_string_update(*self.map, &ukey, &uval) };
+            let ok = unsafe { cuckoo_string_insert(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
                     cas,
@@ -103,7 +103,7 @@ impl StorageBackend for LibcuckooStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { cuckoo_string_update(*self.map, &ukey, &uval) };
+            let _ = unsafe { cuckoo_string_insert(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }

@@ -7,9 +7,9 @@ use serde_derive::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use super::backends::lightning::LightningBackend;
+use super::backends::*;
 use super::backends::StorageBackend;
-pub type DefaultMemoryStore = MemoryStore<LightningBackend>;
+pub type DefaultMemoryStore = MemoryStore<lightning::LightningBackend>;
 
 #[derive(Serialize, Deserialize)]
 pub struct BytesCodec(Vec<u8>);
