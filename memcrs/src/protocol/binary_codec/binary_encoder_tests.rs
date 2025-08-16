@@ -112,7 +112,7 @@ mod tests {
             header,
             flags: 0,
             key: Bytes::from("foo"),
-            value: from_string("test").into(),
+            value: from_string("test"),
         });
         let encode_result = encode_packet(response);
         match encode_result {
@@ -138,7 +138,7 @@ mod tests {
             header,
             flags: 0,
             key: Bytes::new(),
-            value: from_string("3050").into(),
+            value: from_string("3050"),
         });
         let encode_result = encode_packet(response);
         match encode_result {

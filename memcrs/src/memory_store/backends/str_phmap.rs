@@ -54,7 +54,7 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
     UnifiedStr { data }
 }
 
-fn bytes_to_unified_str_large(buf: &[u8]) -> UnifiedStrLarge {
+fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> UnifiedStrLarge {
     let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
     let len = core::cmp::min(buf.len(), UNIFIED_STR_LARGE_CAP);
     data[..len].copy_from_slice(&buf[..len]);
@@ -77,7 +77,7 @@ impl StorageBackend for PhmapStringBackend {
         if found {
             Ok(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: out.as_bytes_trimmed().to_vec(),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)
@@ -98,7 +98,7 @@ impl StorageBackend for PhmapStringBackend {
         if removed {
             Some(Record {
                 header: CacheMetaData::new(0, 0, 0),
-                value: out.as_bytes_trimmed().to_vec(),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             None
@@ -154,7 +154,7 @@ impl StorageBackend for PhmapStringBackend {
         if removed {
             Ok(Record {
                 header,
-                value: out.as_bytes_trimmed().to_vec(),
+                value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
             })
         } else {
             Err(CacheError::NotFound)

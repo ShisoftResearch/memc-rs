@@ -12,6 +12,7 @@ use crate::{
 
 use super::StorageBackend;
 use crate::ffi::unified_str::{UnifiedStr, UnifiedStrHasher, UnifiedStrLarge};
+use bytes::Bytes;
 
 pub struct LightningLockBackend(
     LockingHashMap<UnifiedStr, UnifiedStrLarge, System, UnifiedStrHasher>,
@@ -103,11 +104,11 @@ impl StorageBackend for LightningLockBackend {
             .filter(|(k, v)| {
                 let rec = v.to_record().unwrap_or_else(|| Record {
                     header: CacheMetaData::new(0, 0, 0),
-                    value: Vec::new(),
+                    value: Bytes::new(),
                 });
-                f(&k.as_bytes_trimmed().to_vec(), &rec)
+                f(&Bytes::copy_from_slice(k.as_bytes_trimmed()), &rec)
             })
-            .map(|(k, _v)| k.as_bytes_trimmed().to_vec())
+            .map(|(k, _v)| Bytes::copy_from_slice(k.as_bytes_trimmed()))
             .collect()
     }
 }

@@ -21,7 +21,7 @@ impl StorageBackend for SccHashMapBackend {
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         self.0
             .get(key)
-            .map(|v: scc::hash_map::OccupiedEntry<'_, Vec<u8>, Record>| v.get().clone())
+            .map(|v: scc::hash_map::OccupiedEntry<'_, bytes::Bytes, Record>| v.get().clone())
             .ok_or(CacheError::NotFound)
     }
 
