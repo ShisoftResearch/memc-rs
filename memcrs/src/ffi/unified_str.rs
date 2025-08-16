@@ -85,12 +85,6 @@ impl Hash for UnifiedStr {
     }
 }
 
-impl Hash for MapValue {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write(&self.data[..]);
-    }
-}
-
 impl UnifiedStr {
     #[inline]
     pub fn from_bytes(src: &[u8]) -> Self {

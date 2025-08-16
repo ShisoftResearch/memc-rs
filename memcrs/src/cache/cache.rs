@@ -11,14 +11,14 @@ pub type ValueType = Bytes;
 /// Meta data stored with cache value
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CacheMetaData {
-    pub(crate) timestamp: u64,
-    pub(crate) cas: u64,
+    pub(crate) timestamp: u32,
+    pub(crate) cas: u32,
     pub(crate) flags: u32,
     pub(crate) time_to_live: u32,
 }
 
 impl CacheMetaData {
-    pub fn new(cas: u64, flags: u32, time_to_live: u32) -> CacheMetaData {
+    pub fn new(cas: u32, flags: u32, time_to_live: u32) -> CacheMetaData {
         CacheMetaData {
             timestamp: 0,
             cas,
@@ -57,7 +57,7 @@ impl Clone for Record {
 }
 
 impl Record {
-    pub fn new(value: ValueType, cas: u64, flags: u32, expiration: u32) -> Record {
+    pub fn new(value: ValueType, cas: u32, flags: u32, expiration: u32) -> Record {
         let header = CacheMetaData::new(cas, flags, expiration);
         Record { header, value }
     }
@@ -81,7 +81,7 @@ impl PartialEq for Record {
 /// cas indicates version stored in cache
 #[derive(Debug)]
 pub struct SetStatus {
-    pub cas: u64,
+    pub cas: u32,
 }
 
 /// Read only view over a store

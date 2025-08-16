@@ -25,7 +25,7 @@ pub type DecrementParam = IncrementParam;
 pub type DeltaResultValueType = u64;
 #[derive(Debug)]
 pub struct DeltaResult {
-    pub cas: u64,
+    pub cas: u32,
     pub value: DeltaResultValueType,
 }
 /**

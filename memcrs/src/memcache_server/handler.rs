@@ -9,7 +9,7 @@ use std::sync::Arc;
 const EXTRAS_LENGTH: u8 = 4;
 
 fn into_record_meta(request_header: &binary::RequestHeader, expiration: u32) -> store::Meta {
-    store::Meta::new(request_header.cas, request_header.opaque, expiration)
+    store::Meta::new(request_header.cas as u32, request_header.opaque, expiration)
 }
 
 fn into_quiet_get(response: binary_codec::BinaryResponse) -> Option<binary_codec::BinaryResponse> {
@@ -147,7 +147,7 @@ impl BinaryHandler {
     ) -> binary_codec::BinaryResponse {
         let record = store::Record::new(
             request.value,
-            request.header.cas,
+            request.header.cas as u32,
             request.flags,
             request.expiration,
         );
@@ -159,7 +159,7 @@ impl BinaryHandler {
 
         match result {
             Ok(command_status) => {
-                response_header.cas = command_status.cas;
+                response_header.cas = command_status.cas as u64;
                 binary_codec::BinaryResponse::Set(binary::SetResponse {
                     header: *response_header,
                 })
@@ -177,7 +177,7 @@ impl BinaryHandler {
         append_req: binary::AppendRequest,
         response_header: &mut binary::ResponseHeader,
     ) -> binary_codec::BinaryResponse {
-        let record = store::Record::new(append_req.value, append_req.header.cas, 0, 0);
+        let record = store::Record::new(append_req.value, append_req.header.cas as u32, 0, 0);
         let result = if self.is_append(append_req.header.opcode) {
             self.storage.append(append_req.key, record)
         } else {
@@ -186,7 +186,7 @@ impl BinaryHandler {
 
         match result {
             Ok(status) => {
-                response_header.cas = status.cas;
+                response_header.cas = status.cas as u64;
                 binary_codec::BinaryResponse::Append(binary::AppendResponse {
                     header: *response_header,
                 })
@@ -206,14 +206,14 @@ impl BinaryHandler {
     ) -> binary_codec::BinaryResponse {
         let record = store::Record::new(
             set_req.value,
-            set_req.header.cas,
+            set_req.header.cas as u32,
             set_req.flags,
             set_req.expiration,
         );
 
         match self.storage.set(set_req.key, record) {
             Ok(status) => {
-                response_header.cas = status.cas;
+                response_header.cas = status.cas as u64;
                 binary_codec::BinaryResponse::Set(binary::SetResponse {
                     header: *response_header,
                 })
@@ -257,7 +257,7 @@ impl BinaryHandler {
                     record.value.len() as u32 + EXTRAS_LENGTH as u32 + key.len() as u32;
                 response_header.key_length = key.len() as u16;
                 response_header.extras_length = EXTRAS_LENGTH;
-                response_header.cas = record.header.cas;
+                response_header.cas = record.header.cas as u64;
                 binary_codec::BinaryResponse::Get(binary::GetResponse {
                     header: *response_header,
                     flags: record.header.flags,
@@ -304,7 +304,7 @@ impl BinaryHandler {
             Ok(delta_result) => {
                 response_header.body_length =
                     std::mem::size_of::<store::DeltaResultValueType>() as u32;
-                response_header.cas = delta_result.cas;
+                response_header.cas = delta_result.cas as u64;
                 binary_codec::BinaryResponse::Increment(binary::IncrementResponse {
                     header: *response_header,
                     value: delta_result.value,
@@ -333,7 +333,7 @@ impl BinaryHandler {
             Ok(delta_result) => {
                 response_header.body_length =
                     std::mem::size_of::<store::DeltaResultValueType>() as u32;
-                response_header.cas = delta_result.cas;
+                response_header.cas = delta_result.cas as u64;
                 binary_codec::BinaryResponse::Decrement(binary::DecrementResponse {
                     header: *response_header,
                     value: delta_result.value,

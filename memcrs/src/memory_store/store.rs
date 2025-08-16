@@ -54,7 +54,7 @@ impl<M: StorageBackend> impl_details::CacheImplDetails for MemoryStore<M> {
             return false;
         }
 
-        if record.header.timestamp + (record.header.time_to_live as u64) > current_time {
+        if record.header.timestamp + record.header.time_to_live > current_time {
             return false;
         }
         match self.remove(key) {
@@ -99,12 +99,12 @@ impl<M: StorageBackend> Cache for MemoryStore<M> {
 
 impl Peripherals {
     #[inline(always)]
-    pub fn get_cas_id(&self) -> u64 {
-        self.cas_id.fetch_add(1, Ordering::Relaxed)
+    pub fn get_cas_id(&self) -> u32 {
+        self.cas_id.fetch_add(1, Ordering::Relaxed) as u32
     }
 
     #[inline(always)]
-    pub fn timestamp(&self) -> u64 {
-        self.timer.timestamp()
+    pub fn timestamp(&self) -> u32 {
+        self.timer.timestamp() as u32
     }
 }

@@ -25,7 +25,7 @@ fn if_not_defined_cas_should_be_1() {
 #[test]
 fn if_cas_defined_it_should_be_returned() {
     let storage = create_server().storage;
-    let cas: u64 = 0xDEAD_BEEF;
+    let cas: u32 = 0xDEAD_BEEF;
     let key = Bytes::from("key");
     let record = Record::new(from_string("test data"), cas, 0, 0);
     info!("Record {:?}", &record.header);
@@ -45,7 +45,7 @@ fn if_cas_defined_it_should_be_returned() {
 #[test]
 fn insert_should_fail_on_cas_mismatch() {
     let storage = create_server().storage;
-    let cas: u64 = 0xDEAD_BEEF;
+    let cas: u32 = 0xDEAD_BEEF;
     let key = Bytes::from("key");
     let mut record = Record::new(from_string("test data"), cas, 0, 0);
     let result = storage.set(key.clone(), record.clone());
@@ -61,7 +61,7 @@ fn insert_should_fail_on_cas_mismatch() {
 #[test]
 fn record_should_expire_in_given_time() {
     let server = create_server();
-    let cas: u64 = 0xDEAD_BEEF;
+    let cas: u32 = 0xDEAD_BEEF;
     let key = Bytes::from("key");
     let record = Record::new(from_string("test data"), cas, 0, 123);
     let result = server.storage.set(key.clone(), record);
