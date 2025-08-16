@@ -19,7 +19,7 @@ namespace tbbffi {
   struct StringMapWrapper {
     explicit StringMapWrapper(size_t capacity)
       : map(capacity) {}
-    using Table = tbb::concurrent_hash_map<UnifiedStr, UnifiedStrLarge, UnifiedStrHashCompare>;
+    using Table = tbb::concurrent_hash_map<UnifiedStr, MapValue, UnifiedStrHashCompare>;
     Table map;
   };
 
@@ -32,10 +32,10 @@ extern "C" {
 tbbffi::StringMapWrapper* new_tbb_string_map(size_t capacity);
 void free_tbb_string_map(tbbffi::StringMapWrapper* map);
 
-bool tbb_string_insert(tbbffi::StringMapWrapper* m, UnifiedStr& key, UnifiedStrLarge& value);
-bool tbb_string_get(tbbffi::StringMapWrapper* m, UnifiedStr& key, UnifiedStrLarge* out_value);
+bool tbb_string_insert(tbbffi::StringMapWrapper* m, UnifiedStr& key, MapValue& value);
+bool tbb_string_get(tbbffi::StringMapWrapper* m, UnifiedStr& key, MapValue* out_value);
 bool tbb_string_remove(tbbffi::StringMapWrapper* m, UnifiedStr& key);
-bool tbb_string_update(tbbffi::StringMapWrapper* m, UnifiedStr& key, UnifiedStrLarge& value);
+bool tbb_string_update(tbbffi::StringMapWrapper* m, UnifiedStr& key, MapValue& value);
 
 #ifdef __cplusplus
 }

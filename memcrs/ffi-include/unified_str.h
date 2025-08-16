@@ -20,7 +20,7 @@ typedef struct {
 
 typedef struct {
     uint8_t data[UNIFIED_STR_LARGE_CAP];
-} UnifiedStrLarge;
+} MapValue;
 
 #ifdef __cplusplus
 }
@@ -68,9 +68,9 @@ struct UnifiedStrEqual {
   }
 };
 
-// Hash and equality for UnifiedStrLarge
-struct UnifiedStrLargeHash {
-  size_t operator()(const UnifiedStrLarge& s) const {
+// Hash and equality for MapValue
+struct MapValueHash {
+  size_t operator()(const MapValue& s) const {
     // Optimized FNV-1a hash processing 8 bytes at a time for better performance
     // Exclude the last byte (length byte) from hashing
     size_t h = 0xcbf29ce484222325;
@@ -95,19 +95,19 @@ struct UnifiedStrLargeHash {
   }
 };
 
-struct UnifiedStrLargeEqual {
-  bool operator()(const UnifiedStrLarge& a, const UnifiedStrLarge& b) const {
+struct MapValueEqual {
+  bool operator()(const MapValue& a, const MapValue& b) const {
     // Compare only the data bytes, excluding the length byte
     return std::memcmp(a.data, b.data, UNIFIED_STR_LARGE_DATA_CAP) == 0;
   }
 };
 
-// Patch: Mark UnifiedStr and UnifiedStrLarge as trivially copyable for C++ type traits
+// Patch: Mark UnifiedStr and MapValue as trivially copyable for C++ type traits
 namespace std {
   template<>
   struct is_trivially_copyable<UnifiedStr> : std::true_type {};
   
   template<>
-  struct is_trivially_copyable<UnifiedStrLarge> : std::true_type {};
+  struct is_trivially_copyable<MapValue> : std::true_type {};
 }
 #endif 

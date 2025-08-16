@@ -8,7 +8,7 @@
 namespace parlayffi {
 
   // Concurrent map for UnifiedStr→UnifiedStr
-  using StringMapType = parlay::parlay_unordered_map<UnifiedStr, UnifiedStrLarge, UnifiedStrHash, UnifiedStrEqual>;
+  using StringMapType = parlay::parlay_unordered_map<UnifiedStr, MapValue, UnifiedStrHash, UnifiedStrEqual>;
 
   // A tiny C++ class owning one map instance.
   struct StringMapWrapper {
@@ -23,10 +23,10 @@ namespace parlayffi {
   std::shared_ptr<StringMapWrapper> new_string_map_cpp(size_t capacity);
 
   // Instance methods on StringMapWrapper:
-  bool insert_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr &key, UnifiedStrLarge& value);
-  bool get_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, UnifiedStrLarge* out_value);
+  bool insert_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr &key, MapValue& value);
+  bool get_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, MapValue* out_value);
   bool remove_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key);
-  bool update_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, UnifiedStrLarge& value);
+  bool update_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, MapValue& value);
 
 } // namespace parlayffi
 
@@ -38,10 +38,10 @@ typedef struct parlayffi_StringMapWrapperOpaque parlayffi_StringMapWrapperOpaque
 
 parlayffi_StringMapWrapperOpaque* new_string_map(size_t capacity);
 void free_string_map(parlayffi_StringMapWrapperOpaque* map);
-bool insert_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, UnifiedStrLarge& value);
-bool get_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value);
+bool insert_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, MapValue& value);
+bool get_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, MapValue* out_value);
 bool remove_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key);
-bool update_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, UnifiedStrLarge& value);
+bool update_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, MapValue& value);
 #ifdef __cplusplus
 }
 #endif 

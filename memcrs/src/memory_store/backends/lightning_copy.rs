@@ -11,10 +11,10 @@ use crate::{
 };
 
 use super::StorageBackend;
-use crate::ffi::unified_str::{UnifiedStr, UnifiedStrHasher, UnifiedStrLarge};
+use crate::ffi::unified_str::{UnifiedStr, UnifiedStrHasher, MapValue};
 use bytes::Bytes;
 
-pub struct LightningCopyBackend(PtrHashMap<UnifiedStr, UnifiedStrLarge, System, UnifiedStrHasher>);
+pub struct LightningCopyBackend(PtrHashMap<UnifiedStr, MapValue, System, UnifiedStrHasher>);
 
 impl StorageBackend for LightningCopyBackend {
     fn init(cap: usize) -> Self {
@@ -49,7 +49,7 @@ impl StorageBackend for LightningCopyBackend {
         mut record: crate::memcache::store::Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
-        let uval = UnifiedStrLarge::from_record(&record);
+        let uval = MapValue::from_record(&record);
         let ukey = UnifiedStr::from_bytes(&key[..]);
         if record.header.cas > 0 {
             record.header.cas += 1;

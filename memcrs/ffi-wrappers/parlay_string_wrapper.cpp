@@ -9,11 +9,11 @@ namespace parlayffi {
     return std::make_shared<StringMapWrapper>(capacity);
   }
 
-  bool insert_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, UnifiedStrLarge& value) {
+  bool insert_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, MapValue& value) {
     return m->map.insert({key, value}).second;
   }
 
-  bool get_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, UnifiedStrLarge* out_value) {
+  bool get_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, MapValue* out_value) {
     auto result = m->map.Find(key);
     if (result.has_value()) {
       if (out_value != nullptr) {
@@ -28,8 +28,8 @@ namespace parlayffi {
     return m->map.erase(key) > 0;
   }
 
-  bool update_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, UnifiedStrLarge& value) {
-    auto result = m->map.Upsert(key, [value](const std::optional<UnifiedStrLarge>& v) { return value; });
+  bool update_string_kv_cpp(const std::shared_ptr<StringMapWrapper>& m, UnifiedStr& key, MapValue& value) {
+    auto result = m->map.Upsert(key, [value](const std::optional<MapValue>& v) { return value; });
     return !result.has_value();
   }
 
@@ -48,16 +48,16 @@ parlayffi_StringMapWrapperOpaque* new_string_map(size_t capacity) {
 void free_string_map(parlayffi_StringMapWrapperOpaque* map) {
   delete map;
 }
-bool insert_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, UnifiedStrLarge& value) {
+bool insert_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, MapValue& value) {
   return parlayffi::insert_string_kv_cpp(map->inner, key, value);
 }
-bool get_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value) {
+bool get_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, MapValue* out_value) {
   return parlayffi::get_string_kv_cpp(map->inner, key, out_value);
 }
 bool remove_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key) {
   return parlayffi::remove_string_kv_cpp(map->inner, key);
 }
-bool update_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, UnifiedStrLarge& value) {
+bool update_string_kv(parlayffi_StringMapWrapperOpaque* map, UnifiedStr& key, MapValue& value) {
   return parlayffi::update_string_kv_cpp(map->inner, key, value);
 }
 } // extern "C" 

@@ -8,11 +8,11 @@ namespace parallelffi {
   std::shared_ptr<ParallelStringMap> new_parallel_string_map_cpp(size_t capacity) {
     return std::make_shared<ParallelStringMap>(capacity);
   }
-  bool parallel_string_insert_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, UnifiedStrLarge& value) {
+  bool parallel_string_insert_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, MapValue& value) {
     return m->insert(key, value);
   }
-  bool parallel_string_get_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, UnifiedStrLarge* out_value) {
-    UnifiedStrLarge value;
+  bool parallel_string_get_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, MapValue* out_value) {
+    MapValue value;
     bool found = m->get_value(key, value);
     if (found && out_value != nullptr) {
       *out_value = value;
@@ -41,10 +41,10 @@ parallelffi_ParallelStringMapOpaque* new_parallel_string_map(size_t capacity) {
 void free_parallel_string_map(parallelffi_ParallelStringMapOpaque* map) {
   delete map;
 }
-bool parallel_string_insert(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge& value) {
+bool parallel_string_insert(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, MapValue& value) {
   return parallelffi::parallel_string_insert_cpp(map->inner, key, value);
 }
-bool parallel_string_get(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value) {
+bool parallel_string_get(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, MapValue* out_value) {
   return parallelffi::parallel_string_get_cpp(map->inner, key, out_value);
 }
 bool parallel_string_remove(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key) {

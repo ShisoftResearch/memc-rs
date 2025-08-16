@@ -8,15 +8,15 @@ namespace seqffi {
   std::shared_ptr<SeqStringMap> new_seq_string_map_cpp(size_t capacity) {
     return std::make_shared<SeqStringMap>(capacity);
   }
-  bool seq_string_find_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, UnifiedStrLarge* out_value) {
-    UnifiedStrLarge value;
+  bool seq_string_find_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, MapValue* out_value) {
+    MapValue value;
     bool found = m->get_value(key, value);
     if (found && out_value != nullptr) {
       *out_value = value;
     }
     return found;
   }
-  bool seq_string_insert_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, UnifiedStrLarge& value) {
+  bool seq_string_insert_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, MapValue& value) {
     return m->insert(key, value);
   }
   bool seq_string_remove_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key) {
@@ -41,10 +41,10 @@ seqffi_SeqStringMapOpaque* new_seq_string_map(size_t capacity) {
 void free_seq_string_map(seqffi_SeqStringMapOpaque* map) {
   delete map;
 }
-bool seq_string_find(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value) {
+bool seq_string_find(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, MapValue* out_value) {
   return seqffi::seq_string_find_cpp(map->inner, key, out_value);
 }
-bool seq_string_insert(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge& value) {
+bool seq_string_insert(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, MapValue& value) {
   return seqffi::seq_string_insert_cpp(map->inner, key, value);
 }
 bool seq_string_remove(seqffi_SeqStringMapOpaque* map, UnifiedStr& key) {

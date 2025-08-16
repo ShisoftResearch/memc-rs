@@ -19,7 +19,7 @@ template<
     class KeyEqual = UnifiedStrEqual
 >
 class MapWrapper {
-  using UMap = folly::ConcurrentHashMap<UnifiedStr, UnifiedStrLarge, Hash, KeyEqual>;
+  using UMap = folly::ConcurrentHashMap<UnifiedStr, MapValue, Hash, KeyEqual>;
 
   UMap map_;
 
@@ -28,7 +28,7 @@ public:
     : map_(capacity)
   {}
 
-  bool insert(const UnifiedStr& k, const UnifiedStrLarge& v) {
+  bool insert(const UnifiedStr& k, const MapValue& v) {
     return map_.insert({k, v}).second;
   }
 
@@ -42,11 +42,11 @@ public:
     return map_.erase(k) == 1;
   }
 
-  bool update(const UnifiedStr& k, const UnifiedStrLarge& v) {
+  bool update(const UnifiedStr& k, const MapValue& v) {
     return map_.insert({k, v}).second;
   }
 
-  std::optional<UnifiedStrLarge> get_value(const UnifiedStr& k) const {
+  std::optional<MapValue> get_value(const UnifiedStr& k) const {
     auto it = map_.find(k);
     if (it != map_.end()) return it->second;
     return std::nullopt;
@@ -58,10 +58,10 @@ using StringMap = MapWrapper<>;
 
 // 3) C++ API (for internal use)
 std::shared_ptr<StringMap> new_folly_string_map_cpp(std::size_t capacity);
-bool folly_string_insert_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key, UnifiedStrLarge& value);
-bool folly_string_get_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key, UnifiedStrLarge* out_value);
+bool folly_string_insert_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key, MapValue& value);
+bool folly_string_get_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key, MapValue* out_value);
 bool folly_string_remove_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key);
-bool folly_string_update_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key, UnifiedStrLarge& value);
+bool folly_string_update_cpp(const std::shared_ptr<StringMap>& m, UnifiedStr& key, MapValue& value);
 
 } // namespace follyffi
 
@@ -73,10 +73,10 @@ typedef struct follyffi_StringMapOpaque follyffi_StringMapOpaque;
 
 follyffi_StringMapOpaque* new_folly_string_map(std::size_t capacity);
 void free_folly_string_map(follyffi_StringMapOpaque* map);
-bool folly_string_insert(follyffi_StringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge& value);
-bool folly_string_get(follyffi_StringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value);
+bool folly_string_insert(follyffi_StringMapOpaque* map, UnifiedStr& key, MapValue& value);
+bool folly_string_get(follyffi_StringMapOpaque* map, UnifiedStr& key, MapValue* out_value);
 bool folly_string_remove(follyffi_StringMapOpaque* map, UnifiedStr& key);
-bool folly_string_update(follyffi_StringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge& value);
+bool folly_string_update(follyffi_StringMapOpaque* map, UnifiedStr& key, MapValue& value);
 #ifdef __cplusplus
 }
 #endif 

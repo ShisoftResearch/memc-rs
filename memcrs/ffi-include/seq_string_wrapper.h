@@ -10,10 +10,10 @@ namespace seqffi {
 
 class SeqStringMap {
   using Table = seq::ordered_map<
-    UnifiedStr, UnifiedStrLarge,
+    UnifiedStr, MapValue,
     UnifiedStrHash,
     UnifiedStrEqual,
-    std::allocator<std::pair<const UnifiedStr, UnifiedStrLarge>>
+    std::allocator<std::pair<const UnifiedStr, MapValue>>
   >;
   Table table_;
 
@@ -26,7 +26,7 @@ public:
     return table_.find(key) != table_.end();
   }
 
-  bool insert(const UnifiedStr& key, const UnifiedStrLarge& value) {
+  bool insert(const UnifiedStr& key, const MapValue& value) {
     return table_.emplace(key, value).second;
   }
 
@@ -34,7 +34,7 @@ public:
     return table_.erase(key) > 0;
   }
 
-  bool get_value(const UnifiedStr& key, UnifiedStrLarge& value) const {
+  bool get_value(const UnifiedStr& key, MapValue& value) const {
     auto it = table_.find(key);
     if (it != table_.end()) {
       value = it->second;
@@ -50,8 +50,8 @@ public:
 
 // Factory + operations
 std::shared_ptr<SeqStringMap> new_seq_string_map_cpp(size_t capacity);
-bool seq_string_find_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, UnifiedStrLarge* out_value);
-bool seq_string_insert_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, UnifiedStrLarge& value);
+bool seq_string_find_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, MapValue* out_value);
+bool seq_string_insert_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, MapValue& value);
 bool seq_string_remove_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key);
 int64_t seq_string_size_cpp(const std::shared_ptr<SeqStringMap>& m);
 
@@ -65,8 +65,8 @@ typedef struct seqffi_SeqStringMapOpaque seqffi_SeqStringMapOpaque;
 
 seqffi_SeqStringMapOpaque* new_seq_string_map(size_t capacity);
 void free_seq_string_map(seqffi_SeqStringMapOpaque* map);
-bool seq_string_find(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value);
-bool seq_string_insert(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge& value);
+bool seq_string_find(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, MapValue* out_value);
+bool seq_string_insert(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, MapValue& value);
 bool seq_string_remove(seqffi_SeqStringMapOpaque* map, UnifiedStr& key);
 int64_t seq_string_size(seqffi_SeqStringMapOpaque* map);
 #ifdef __cplusplus

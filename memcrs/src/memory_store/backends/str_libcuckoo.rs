@@ -9,7 +9,7 @@ use crate::{
 
 use super::StorageBackend;
 use crate::ffi::unified_str::{
-    UnifiedStr, UnifiedStrLarge, UNIFIED_STR_CAP, UNIFIED_STR_LARGE_CAP,
+    UnifiedStr, MapValue, UNIFIED_STR_CAP, UNIFIED_STR_LARGE_CAP,
 };
 
 #[repr(C)]
@@ -21,12 +21,12 @@ extern "C" {
     fn cuckoo_string_insert(
         map: *mut CuckooStringMapOpaque,
         key: &UnifiedStr,
-        value: &UnifiedStrLarge,
+        value: &MapValue,
     ) -> bool;
     fn cuckoo_string_get(
         map: *mut CuckooStringMapOpaque,
         key: &UnifiedStr,
-        out_value: *mut UnifiedStrLarge,
+        out_value: *mut MapValue,
     ) -> bool;
     fn cuckoo_string_remove(map: *mut CuckooStringMapOpaque, key: &UnifiedStr) -> bool;
     fn cuckoo_string_size(map: *mut CuckooStringMapOpaque) -> i64;
@@ -53,11 +53,11 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
     data[..len].copy_from_slice(&buf[..len]);
     UnifiedStr { data }
 }
-fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> UnifiedStrLarge {
+fn bytes_to_unified_str_large(buf: &bytes::Bytes) -> MapValue {
     let mut data = [0u8; UNIFIED_STR_LARGE_CAP];
     let len = core::cmp::min(buf.len(), UNIFIED_STR_LARGE_CAP);
     data[..len].copy_from_slice(&buf[..len]);
-    UnifiedStrLarge { data }
+    MapValue { data }
 }
 
 impl StorageBackend for LibcuckooStringBackend {
@@ -67,10 +67,10 @@ impl StorageBackend for LibcuckooStringBackend {
     }
     fn get(&self, key: &KeyType) -> crate::cache::error::Result<Record> {
         let ukey = bytes_to_unified_str(key);
-        let mut out = UnifiedStrLarge {
+        let mut out = MapValue {
             data: [0; UNIFIED_STR_LARGE_CAP],
         };
-        if unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) } {
+        if unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut MapValue) } {
             Ok(Record {
                 header: CacheMetaData::new(0, 0, 0),
                 value: bytes::Bytes::copy_from_slice(out.as_bytes_trimmed()),
@@ -81,10 +81,10 @@ impl StorageBackend for LibcuckooStringBackend {
     }
     fn remove(&self, key: &KeyType) -> Option<Record> {
         let ukey = bytes_to_unified_str(key);
-        let mut out = UnifiedStrLarge {
+        let mut out = MapValue {
             data: [0; UNIFIED_STR_LARGE_CAP],
         };
-        if !unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) } {
+        if !unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut MapValue) } {
             return None;
         }
         if unsafe { cuckoo_string_remove(*self.map, &ukey) } {
@@ -122,10 +122,10 @@ impl StorageBackend for LibcuckooStringBackend {
     }
     fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
         let ukey = bytes_to_unified_str(&key);
-        let mut out = UnifiedStrLarge {
+        let mut out = MapValue {
             data: [0; UNIFIED_STR_LARGE_CAP],
         };
-        if !unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) } {
+        if !unsafe { cuckoo_string_get(*self.map, &ukey, &mut out as *mut MapValue) } {
             return Err(CacheError::NotFound);
         }
         if header.cas != 0 {

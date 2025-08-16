@@ -13,7 +13,7 @@ pub struct UnifiedStr {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-pub struct UnifiedStrLarge {
+pub struct MapValue {
     pub data: [u8; UNIFIED_STR_LARGE_CAP],
 }
 
@@ -85,7 +85,7 @@ impl Hash for UnifiedStr {
     }
 }
 
-impl Hash for UnifiedStrLarge {
+impl Hash for MapValue {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.data[..]);
     }
@@ -121,7 +121,7 @@ impl UnifiedStr {
     }
 }
 
-impl UnifiedStrLarge {
+impl MapValue {
     #[inline]
     pub fn from_bytes(src: &[u8]) -> Self {
         let mut data = [0u8; UNIFIED_STR_LARGE_CAP];

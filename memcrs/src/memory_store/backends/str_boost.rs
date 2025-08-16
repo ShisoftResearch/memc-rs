@@ -9,7 +9,7 @@ use crate::{
 
 use super::StorageBackend;
 use crate::ffi::unified_str::{
-    UnifiedStr, UnifiedStrLarge, UNIFIED_STR_CAP, UNIFIED_STR_LARGE_CAP,
+    UnifiedStr, MapValue, UNIFIED_STR_CAP, UNIFIED_STR_LARGE_CAP,
 };
 
 #[repr(C)]
@@ -21,12 +21,12 @@ extern "C" {
     fn boost_string_insert(
         map: *mut BoostStringMapOpaque,
         key: &UnifiedStr,
-        value: &UnifiedStrLarge,
+        value: &MapValue,
     ) -> bool;
     fn boost_string_get(
         map: *mut BoostStringMapOpaque,
         key: &UnifiedStr,
-        out_value: *mut UnifiedStrLarge,
+        out_value: *mut MapValue,
     ) -> bool;
     fn boost_string_remove(map: *mut BoostStringMapOpaque, key: &UnifiedStr) -> bool;
     fn boost_string_size(map: *mut BoostStringMapOpaque) -> i64;
@@ -54,8 +54,8 @@ fn bytes_to_unified_str(buf: &KeyType) -> UnifiedStr {
     UnifiedStr { data }
 }
 
-fn bytes_to_unified_str_large(record: &Record) -> UnifiedStrLarge {
-    UnifiedStrLarge::from_record(record)
+fn bytes_to_unified_str_large(record: &Record) -> MapValue {
+    MapValue::from_record(record)
 }
 
 impl StorageBackend for BoostStringBackend {
@@ -66,10 +66,10 @@ impl StorageBackend for BoostStringBackend {
 
     fn get(&self, key: &KeyType) -> crate::cache::error::Result<Record> {
         let ukey = bytes_to_unified_str(key);
-        let mut out = UnifiedStrLarge {
+        let mut out = MapValue {
             data: [0; UNIFIED_STR_LARGE_CAP],
         };
-        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
+        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if found {
             out.to_record().ok_or(CacheError::NotFound)
         } else {
@@ -79,10 +79,10 @@ impl StorageBackend for BoostStringBackend {
 
     fn remove(&self, key: &KeyType) -> Option<Record> {
         let ukey = bytes_to_unified_str(key);
-        let mut out = UnifiedStrLarge {
+        let mut out = MapValue {
             data: [0; UNIFIED_STR_LARGE_CAP],
         };
-        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
+        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if !found {
             return None;
         }
@@ -121,10 +121,10 @@ impl StorageBackend for BoostStringBackend {
 
     fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
         let ukey = bytes_to_unified_str(&key);
-        let mut out = UnifiedStrLarge {
+        let mut out = MapValue {
             data: [0; UNIFIED_STR_LARGE_CAP],
         };
-        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut UnifiedStrLarge) };
+        let found = unsafe { boost_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if !found {
             return Err(CacheError::NotFound);
         }

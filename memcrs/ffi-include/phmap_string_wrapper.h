@@ -9,10 +9,10 @@ namespace parallelffi {
 
 class ParallelStringMap {
   using Table = phmap::parallel_flat_hash_map<
-    UnifiedStr, UnifiedStrLarge,
+    UnifiedStr, MapValue,
     UnifiedStrHash,
     UnifiedStrEqual,
-    std::allocator<std::pair<const UnifiedStr, UnifiedStrLarge>>,
+    std::allocator<std::pair<const UnifiedStr, MapValue>>,
     12, std::mutex
   >;
   Table table_;
@@ -22,7 +22,7 @@ public:
     table_.reserve(capacity);
   }
 
-  bool insert(const UnifiedStr& key, const UnifiedStrLarge& value) {
+  bool insert(const UnifiedStr& key, const MapValue& value) {
     return table_.emplace(key, value).second;
   }
 
@@ -34,7 +34,7 @@ public:
     return table_.erase(key) > 0;
   }
 
-  bool get_value(const UnifiedStr& key, UnifiedStrLarge& value) const {
+  bool get_value(const UnifiedStr& key, MapValue& value) const {
     bool found = false;
     table_.if_contains(key, [&](const auto& kv) {
       value = kv.second;
@@ -50,8 +50,8 @@ public:
 
 // Factory + operations
 std::shared_ptr<ParallelStringMap> new_parallel_string_map_cpp(size_t capacity);
-bool parallel_string_insert_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, UnifiedStrLarge& value);
-bool parallel_string_get_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, UnifiedStrLarge* out_value);
+bool parallel_string_insert_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, MapValue& value);
+bool parallel_string_get_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, MapValue* out_value);
 bool parallel_string_remove_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key);
 int64_t parallel_string_size_cpp(const std::shared_ptr<ParallelStringMap>& m);
 
@@ -65,8 +65,8 @@ typedef struct parallelffi_ParallelStringMapOpaque parallelffi_ParallelStringMap
 
 parallelffi_ParallelStringMapOpaque* new_parallel_string_map(size_t capacity);
 void free_parallel_string_map(parallelffi_ParallelStringMapOpaque* map);
-bool parallel_string_insert(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge& value);
-bool parallel_string_get(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, UnifiedStrLarge* out_value);
+bool parallel_string_insert(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, MapValue& value);
+bool parallel_string_get(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, MapValue* out_value);
 bool parallel_string_remove(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key);
 int64_t parallel_string_size(parallelffi_ParallelStringMapOpaque* map);
 #ifdef __cplusplus
