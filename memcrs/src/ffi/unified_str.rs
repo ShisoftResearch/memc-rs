@@ -1,4 +1,4 @@
-pub const UNIFIED_STR_CAP: usize = 32;
+pub const UNIFIED_STR_CAP: usize = 16;
 pub const MAP_VAL_BUFFER_CAP: usize = std::mem::size_of::<Record>();
 
 // Reserve the last byte for length information

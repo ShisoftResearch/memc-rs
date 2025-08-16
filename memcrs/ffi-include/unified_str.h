@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <cstring>
 
-#define UNIFIED_STR_CAP 32
+#define UNIFIED_STR_CAP 16
 #define MAP_VAL_BUFFER_CAP 48 // sizeof(Record) in Rust
 
 // Reserve the last byte for length information
