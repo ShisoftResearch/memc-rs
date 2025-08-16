@@ -107,7 +107,7 @@ impl StorageBackend for FollyStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { folly_string_insert(*self.map, &ukey, &uval) };
+            let _ = unsafe { folly_string_update(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }

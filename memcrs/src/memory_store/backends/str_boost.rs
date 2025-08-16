@@ -19,7 +19,7 @@ pub struct BoostStringMapOpaque;
 extern "C" {
     fn new_boost_string_map(capacity: usize) -> *mut BoostStringMapOpaque;
     fn free_boost_string_map(map: *mut BoostStringMapOpaque);
-    fn boost_string_insert(
+    fn boost_string_update(
         map: *mut BoostStringMapOpaque,
         key: &UnifiedStr,
         value: &MapValue,
@@ -106,7 +106,7 @@ impl StorageBackend for BoostStringBackend {
             record.header.timestamp = peripherals.timestamp();
             let cas = record.header.cas;
             let uval = MapValue::from_record(record);
-            let ok = unsafe { boost_string_insert(*self.map, &ukey, &uval) };
+            let ok = unsafe { boost_string_update(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
                     cas,
@@ -116,7 +116,7 @@ impl StorageBackend for BoostStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { boost_string_insert(*self.map, &ukey, &uval) };
+            let _ = unsafe { boost_string_update(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }

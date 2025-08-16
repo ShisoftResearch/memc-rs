@@ -107,7 +107,7 @@ impl StorageBackend for ParlayStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { insert_string_kv(*self.map, &ukey, &uval) };
+            let _ = unsafe { update_string_kv(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }

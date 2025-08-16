@@ -107,7 +107,7 @@ impl StorageBackend for TbbStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { tbb_string_insert(*self.map, &ukey, &uval) };
+            let _ = unsafe { tbb_string_update(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }
