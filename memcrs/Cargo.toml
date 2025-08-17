@@ -53,6 +53,7 @@ cht = "0.5"
 scc = "*"
 contrie = "0.1"
 flurry = "0.4"
+env_logger = "0.11.8"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = { version ="0.5.4", optional = true }

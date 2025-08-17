@@ -2,7 +2,6 @@ use log::info;
 use std::env;
 use std::process;
 use std::sync::Arc;
-use tracing_log::LogTracer;
 extern crate clap;
 extern crate memcrs;
 
@@ -17,21 +16,19 @@ static GLOBAL: Jemalloc = Jemalloc;
 #[global_allocator]
 static GLOBAL: bump_allocator::BumpPointer = bump_allocator::BumpPointer;
 
-fn get_log_level(verbose: u8) -> tracing::Level {
+fn get_log_level_filter(verbose: u8) -> log::LevelFilter {
     // Vary the output based on how many times the user used the "verbose" flag
-    // // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
+    // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
     match verbose {
-        0 => tracing::Level::ERROR,
-        1 => tracing::Level::WARN,
-        2 => tracing::Level::INFO,
-        3 => tracing::Level::DEBUG,
-        _ => tracing::Level::TRACE,
+        0 => log::LevelFilter::Error,
+        1 => log::LevelFilter::Warn,
+        2 => log::LevelFilter::Info,
+        3 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::Trace,
     }
 }
 
 fn main() {
-    LogTracer::init().expect("Cannot initialize logger");
-
     let cli_config = match memcrs::memcache::cli::parser::parse(env::args().collect()) {
         Ok(config) => config,
         Err(err) => {
@@ -39,10 +36,10 @@ fn main() {
             process::exit(1);
         }
     };
-    // Vary the output based on how many times the user used the "verbose" flag
-    // (i.e. 'myprog -v -v -v' or 'myprog -vvv' vs 'myprog -v'
-    tracing_subscriber::fmt()
-        .with_max_level(get_log_level(cli_config.verbose))
+    
+    // Initialize env_logger with the log level based on verbosity
+    env_logger::Builder::from_default_env()
+        .filter_level(get_log_level_filter(cli_config.verbose))
         .init();
 
     info!("Listen address: {}", cli_config.listen_address.to_string());
