@@ -22,6 +22,9 @@ namespace parallelffi {
   bool parallel_string_remove_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key) {
     return m->remove(key);
   }
+  bool parallel_string_update_cpp(const std::shared_ptr<ParallelStringMap>& m, UnifiedStr& key, MapValue& value) {
+    return m->update(key, value);
+  }
   int64_t parallel_string_size_cpp(const std::shared_ptr<ParallelStringMap>& m) {
     return m->size();
   }

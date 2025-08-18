@@ -24,11 +24,11 @@ struct BoostStringMap {
   }
 
   bool insert(const UnifiedStr& k, const MapValue& v) {
-    return table.emplace(k, v);
+    return table.insert(std::make_pair(k, v));
   }
 
   bool remove(const UnifiedStr& k) {
-    return table.erase(k);
+    return table.erase(k) > 0;
   }
 
   bool update(const UnifiedStr& k, const MapValue& v) {

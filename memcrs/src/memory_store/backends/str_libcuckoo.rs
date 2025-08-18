@@ -31,6 +31,7 @@ extern "C" {
     ) -> bool;
     fn cuckoo_string_remove(map: *mut CuckooStringMapOpaque, key: &UnifiedStr) -> bool;
     fn cuckoo_string_size(map: *mut CuckooStringMapOpaque) -> i64;
+    fn cuckoo_string_update(map: *mut CuckooStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
 }
 
 pub struct LibcuckooStringBackend {
@@ -93,7 +94,7 @@ impl StorageBackend for LibcuckooStringBackend {
             record.header.timestamp = peripherals.timestamp();
             let cas = record.header.cas;
             let uval = MapValue::from_record(record);
-            let ok = unsafe { cuckoo_string_insert(*self.map, &ukey, &uval) };
+            let ok = unsafe { cuckoo_string_update(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
                     cas,
@@ -103,7 +104,7 @@ impl StorageBackend for LibcuckooStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { cuckoo_string_insert(*self.map, &ukey, &uval) };
+            let _ = unsafe { cuckoo_string_update(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }

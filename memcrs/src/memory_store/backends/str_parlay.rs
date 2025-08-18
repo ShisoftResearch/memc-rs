@@ -19,11 +19,6 @@ pub struct ParlayStringMapOpaque;
 extern "C" {
     fn new_string_map(capacity: usize) -> *mut ParlayStringMapOpaque;
     fn free_string_map(map: *mut ParlayStringMapOpaque);
-    fn insert_string_kv(
-        map: *mut ParlayStringMapOpaque,
-        key: &UnifiedStr,
-        value: &MapValue,
-    ) -> bool;
     fn get_string_kv(
         map: *mut ParlayStringMapOpaque,
         key: &UnifiedStr,

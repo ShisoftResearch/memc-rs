@@ -22,6 +22,9 @@ namespace seqffi {
   bool seq_string_remove_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key) {
     return m->remove(key);
   }
+  bool seq_string_update_cpp(const std::shared_ptr<SeqStringMap>& m, UnifiedStr& key, MapValue& value) {
+    return m->update(key, value);
+  }
   int64_t seq_string_size_cpp(const std::shared_ptr<SeqStringMap>& m) {
     return m->size();
   }

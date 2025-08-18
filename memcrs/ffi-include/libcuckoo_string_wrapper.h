@@ -22,6 +22,7 @@ public:
 };
 std::shared_ptr<CuckooStringMap> new_cuckoo_string_map_cpp(size_t capacity);
 bool cuckoo_string_insert_cpp(const std::shared_ptr<CuckooStringMap>& m, UnifiedStr& key, MapValue& value);
+bool cuckoo_string_update_cpp(const std::shared_ptr<CuckooStringMap>& m, UnifiedStr& key, MapValue& value);
 bool cuckoo_string_get_cpp(const std::shared_ptr<CuckooStringMap>& m, UnifiedStr& key, MapValue* out_value);
 bool cuckoo_string_remove_cpp(const std::shared_ptr<CuckooStringMap>& m, UnifiedStr& key);
 int64_t cuckoo_string_size_cpp(const std::shared_ptr<CuckooStringMap>& m);
@@ -37,6 +38,7 @@ typedef struct cuckooffi_CuckooStringMapOpaque cuckooffi_CuckooStringMapOpaque;
 cuckooffi_CuckooStringMapOpaque* new_cuckoo_string_map(size_t capacity);
 void free_cuckoo_string_map(cuckooffi_CuckooStringMapOpaque* map);
 bool cuckoo_string_insert(cuckooffi_CuckooStringMapOpaque* map, UnifiedStr& key, MapValue& value);
+bool cuckoo_string_update(cuckooffi_CuckooStringMapOpaque* map, UnifiedStr& key, MapValue& value);
 bool cuckoo_string_get(cuckooffi_CuckooStringMapOpaque* map, UnifiedStr& key, MapValue* out_value);
 bool cuckoo_string_remove(cuckooffi_CuckooStringMapOpaque* map, UnifiedStr& key);
 int64_t cuckoo_string_size(cuckooffi_CuckooStringMapOpaque* map);

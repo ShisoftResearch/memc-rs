@@ -31,6 +31,7 @@ extern "C" {
     ) -> bool;
     fn parallel_string_remove(map: *mut ParallelStringMapOpaque, key: &UnifiedStr) -> bool;
     fn parallel_string_size(map: *mut ParallelStringMapOpaque) -> i64;
+    fn parallel_string_update(map: *mut ParallelStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
 }
 
 pub struct PhmapStringBackend {
@@ -103,7 +104,7 @@ impl StorageBackend for PhmapStringBackend {
             record.header.timestamp = peripherals.timestamp();
             let cas = record.header.cas;
             let uval = MapValue::from_record(record);
-            let ok = unsafe { parallel_string_insert(*self.map, &ukey, &uval) };
+            let ok = unsafe { parallel_string_update(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
                     cas,
@@ -113,7 +114,7 @@ impl StorageBackend for PhmapStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let ok = unsafe { parallel_string_insert(*self.map, &ukey, &uval) };
+            let ok = unsafe { parallel_string_update(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus { cas: 0 })
             } else {

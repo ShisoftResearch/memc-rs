@@ -21,6 +21,9 @@ namespace cuckooffi {
   bool cuckoo_string_remove_cpp(const std::shared_ptr<CuckooStringMap>& m, UnifiedStr& key) {
     return m->remove(key);
   }
+  bool cuckoo_string_update_cpp(const std::shared_ptr<CuckooStringMap>& m, UnifiedStr& key, MapValue& value) {
+    return m->insert(key, value);
+  }
   int64_t cuckoo_string_size_cpp(const std::shared_ptr<CuckooStringMap>& m) {
     return m->size();
   }
@@ -51,5 +54,8 @@ bool cuckoo_string_remove(cuckooffi_CuckooStringMapOpaque* map, UnifiedStr& key)
 }
 int64_t cuckoo_string_size(cuckooffi_CuckooStringMapOpaque* map) {
   return cuckooffi::cuckoo_string_size_cpp(map->inner);
+}
+bool cuckoo_string_update(cuckooffi_CuckooStringMapOpaque* map, UnifiedStr& key, MapValue& value) {
+  return cuckooffi::cuckoo_string_update_cpp(map->inner, key, value);
 }
 } // extern "C" 

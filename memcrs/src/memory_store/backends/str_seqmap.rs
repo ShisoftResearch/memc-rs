@@ -31,6 +31,7 @@ extern "C" {
     ) -> bool;
     fn seq_string_remove(map: *mut SeqStringMapOpaque, key: &UnifiedStr) -> bool;
     fn seq_string_size(map: *mut SeqStringMapOpaque) -> i64;
+    fn seq_string_update(map: *mut SeqStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
 }
 
 pub struct SeqStringBackend {
@@ -93,7 +94,7 @@ impl StorageBackend for SeqStringBackend {
             record.header.timestamp = peripherals.timestamp();
             let cas = record.header.cas;
             let uval = MapValue::from_record(record);
-            let ok = unsafe { seq_string_insert(*self.map, &ukey, &uval) };
+            let ok = unsafe { seq_string_update(*self.map, &ukey, &uval) };
             if ok {
                 Ok(SetStatus {
                     cas,
@@ -103,7 +104,7 @@ impl StorageBackend for SeqStringBackend {
             }
         } else {
             let uval = MapValue::from_record(record);
-            let _ = unsafe { seq_string_insert(*self.map, &ukey, &uval) };
+            let _ = unsafe { seq_string_update(*self.map, &ukey, &uval) };
             Ok(SetStatus { cas: 0 })
         }
     }
