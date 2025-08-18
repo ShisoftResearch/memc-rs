@@ -43,7 +43,7 @@ public:
   }
 
   bool update(const UnifiedStr& k, const MapValue& v) {
-    return map_.insert_or_assign({k, v}).second;
+    return map_.insert_or_assign(k, v).second;
   }
 
   std::optional<MapValue> get_value(const UnifiedStr& k) const {

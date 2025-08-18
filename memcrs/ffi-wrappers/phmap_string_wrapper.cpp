@@ -56,4 +56,7 @@ bool parallel_string_remove(parallelffi_ParallelStringMapOpaque* map, UnifiedStr
 int64_t parallel_string_size(parallelffi_ParallelStringMapOpaque* map) {
   return parallelffi::parallel_string_size_cpp(map->inner);
 }
+bool parallel_string_update(parallelffi_ParallelStringMapOpaque* map, UnifiedStr& key, MapValue& value) {
+  return parallelffi::parallel_string_update_cpp(map->inner, key, value);
+}
 } // extern "C" 

@@ -14,7 +14,9 @@ use crate::ffi::unified_str::{
 };
 
 #[repr(C)]
-pub struct ParlayStringMapOpaque;
+pub struct ParlayStringMapOpaque {
+    _private: [u8; 0],
+}
 
 extern "C" {
     fn new_string_map(capacity: usize) -> *mut ParlayStringMapOpaque;

@@ -56,4 +56,7 @@ bool seq_string_remove(seqffi_SeqStringMapOpaque* map, UnifiedStr& key) {
 int64_t seq_string_size(seqffi_SeqStringMapOpaque* map) {
   return seqffi::seq_string_size_cpp(map->inner);
 }
+bool seq_string_update(seqffi_SeqStringMapOpaque* map, UnifiedStr& key, MapValue& value) {
+  return seqffi::seq_string_update_cpp(map->inner, key, value);
+}
 } // extern "C" 

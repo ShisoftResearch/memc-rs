@@ -14,7 +14,9 @@ use crate::ffi::unified_str::{
 };
 
 #[repr(C)]
-pub struct SeqStringMapOpaque;
+pub struct SeqStringMapOpaque {
+    _private: [u8; 0],
+}
 
 extern "C" {
     fn new_seq_string_map(capacity: usize) -> *mut SeqStringMapOpaque;

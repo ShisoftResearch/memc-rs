@@ -14,7 +14,9 @@ use crate::ffi::unified_str::{
 };
 
 #[repr(C)]
-pub struct TbbStringMapOpaque;
+pub struct TbbStringMapOpaque {
+    _private: [u8; 0],
+}
 
 extern "C" {
     fn new_tbb_string_map(capacity: usize) -> *mut TbbStringMapOpaque;
