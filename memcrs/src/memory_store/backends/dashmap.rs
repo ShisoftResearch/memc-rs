@@ -1,36 +1,47 @@
 use super::StorageBackend;
 use crate::{
     cache::{
-        cache::{KeyType, Record, SetStatus},
+        cache::SetStatus,
         error::CacheError,
-    },
-    memory_store::store::Peripherals,
+    }, ffi::unified_str::*, memory_store::store::Peripherals
 };
 use dashmap::mapref::multiple::RefMulti;
 use dashmap::DashMap;
+use bytes::Bytes;
+use std::mem;
 
-pub struct DashMapBackend(DashMap<KeyType, Record>);
+pub struct DashMapBackend(DashMap<UnifiedStr, MapValue, UnifiedStrHasher>);
 
 impl StorageBackend for DashMapBackend {
     fn init(cap: usize) -> Self {
-        Self(DashMap::with_capacity(cap.next_power_of_two()))
+        Self(DashMap::with_capacity_and_hasher(
+            cap.next_power_of_two(),
+            UnifiedStrHasher::new(),
+        ))
     }
 
     fn get(
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        self.0
-            .get(key)
-            .map(|v| v.clone())
-            .ok_or(CacheError::NotFound)
+        let ukey = UnifiedStr::from_bytes(&key[..]);
+        match self.0.get(&ukey) {
+            Some(v) => {
+                let shadow = v.to_record();
+                let val = shadow.clone();
+                mem::forget(shadow);
+                Ok(val)
+            },
+            None => Err(CacheError::NotFound),
+        }
     }
 
     fn remove(
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
-        self.0.remove(key).map(|(_, v)| v)
+        let ukey = UnifiedStr::from_bytes(&key[..]);
+        self.0.remove(&ukey).map(|(_, v)| v.to_record())
     }
 
     fn set(
@@ -39,30 +50,17 @@ impl StorageBackend for DashMapBackend {
         mut record: crate::memcache::store::Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
-        //trace!("Set: {:?}", &record.header);
+        let ukey = UnifiedStr::from_bytes(&key[..]);
         if record.header.cas > 0 {
-            match self.0.get_mut(&key) {
-                Some(mut key_value) => {
-                    if key_value.header.cas != record.header.cas {
-                        Err(CacheError::KeyExists)
-                    } else {
-                        record.header.cas += 1;
-                        record.header.timestamp = peripherals.timestamp();
-                        let cas = record.header.cas;
-                        *key_value = record;
-                        Ok(SetStatus { cas })
-                    }
-                }
-                None => {
-                    record.header.cas += 1;
-                    record.header.timestamp = peripherals.timestamp();
-                    let cas = record.header.cas;
-                    self.0.insert(key, record);
-                    Ok(SetStatus { cas })
-                }
-            }
+            record.header.cas += 1;
+            record.header.timestamp = peripherals.timestamp();
+            let cas = record.header.cas;
+            let uval = MapValue::from_record(record);
+            self.0.insert(ukey, uval);
+            Ok(SetStatus { cas })
         } else {
-            self.0.insert(key, record);
+            let uval = MapValue::from_record(record);
+            self.0.insert(ukey, uval);
             Ok(SetStatus { cas: 0 })
         }
     }
@@ -72,13 +70,15 @@ impl StorageBackend for DashMapBackend {
         key: crate::memcache::store::KeyType,
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
+        let ukey = UnifiedStr::from_bytes(&key[..]);
         let mut cas_match: Option<bool> = None;
-        match self.0.remove_if(&key, |_key, record| -> bool {
+        match self.0.remove_if(&ukey, |_key, map_value| -> bool {
+            let record = map_value.to_record();
             let result = header.cas == 0 || record.header.cas == header.cas;
             cas_match = Some(result);
             result
         }) {
-            Some(key_value) => Ok(key_value.1),
+            Some(key_value) => Ok(key_value.1.to_record()),
             None => match cas_match {
                 Some(_value) => Err(CacheError::KeyExists),
                 None => Err(CacheError::NotFound),
@@ -88,9 +88,10 @@ impl StorageBackend for DashMapBackend {
 
     fn flush(&self, header: crate::cache::cache::CacheMetaData) {
         if header.time_to_live > 0 {
-            self.0.alter_all(|_key, mut value| {
-                value.header.time_to_live = header.time_to_live;
-                value
+            self.0.alter_all(|_key, map_value| {
+                let mut record = map_value.to_record();
+                record.header.time_to_live = header.time_to_live;
+                MapValue::from_record(record)
             });
         } else {
             self.0.clear();
@@ -107,8 +108,14 @@ impl StorageBackend for DashMapBackend {
     ) -> Vec<crate::memcache::store::KeyType> {
         self.0
             .iter()
-            .filter(|record: &RefMulti<KeyType, Record>| f(record.key(), record.value()))
-            .map(|record: RefMulti<KeyType, Record>| record.key().clone())
+            .filter(|entry: &RefMulti<UnifiedStr, MapValue, UnifiedStrHasher>| {
+                let key_bytes = Bytes::copy_from_slice(entry.key().as_bytes_trimmed());
+                let record = entry.value().to_record();
+                f(&key_bytes, &record)
+            })
+            .map(|entry: RefMulti<UnifiedStr, MapValue, UnifiedStrHasher>| {
+                Bytes::copy_from_slice(entry.key().as_bytes_trimmed())
+            })
             .collect()
     }
 }
