@@ -6,7 +6,7 @@ pub const UNIFIED_STR_DATA_CAP: usize = UNIFIED_STR_CAP - 1;
 pub const MAP_VAL_DATA_CAP: usize = MAP_VAL_BUFFER_CAP - 1;
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd)]
 pub struct UnifiedStr {
     pub data: [u8; UNIFIED_STR_CAP],
 }
@@ -17,7 +17,7 @@ pub struct MapValue {
     pub data: [u8; MAP_VAL_BUFFER_CAP],
 }
 
-use std::{hash::{BuildHasher, Hash, Hasher}, ptr};
+use std::{hash::{BuildHasher, Hash, Hasher}, os::raw::c_void, ptr};
 use crate::cache::cache::{Record, CacheMetaData};
 
 pub struct UnifiedStrHasher {
@@ -134,3 +134,17 @@ impl MapValue {
         }
     }
 }
+
+impl PartialEq for UnifiedStr {
+    fn eq(&self, other: &Self) -> bool {
+        unsafe {
+            libc::memcmp(
+                self.data.as_ptr() as *const c_void,
+                other.data.as_ptr() as *const c_void,
+                UNIFIED_STR_CAP,
+            ) == 0
+        }
+    }
+}
+
+impl Eq for UnifiedStr {}
