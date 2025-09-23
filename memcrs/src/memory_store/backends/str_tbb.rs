@@ -10,7 +10,7 @@ use crate::{
 
 use super::StorageBackend;
 use crate::ffi::unified_str::{
-    UnifiedStr, MapValue, UNIFIED_STR_CAP, MAP_VAL_BUFFER_CAP,
+    UnifiedStr, MapValue, MAP_VAL_BUFFER_CAP,
 };
 
 #[repr(C)]

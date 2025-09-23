@@ -20,7 +20,7 @@ impl StorageBackend for SccHashMapBackend {
         key: &crate::memcache::store::KeyType,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         self.0
-            .get(key)
+            .get_sync(key)
             .map(|v: scc::hash_map::OccupiedEntry<'_, bytes::Bytes, Record>| v.get().clone())
             .ok_or(CacheError::NotFound)
     }
@@ -29,7 +29,7 @@ impl StorageBackend for SccHashMapBackend {
         &self,
         key: &crate::memcache::store::KeyType,
     ) -> Option<crate::memcache::store::Record> {
-        self.0.remove(key).map(|(_, v)| v)
+        self.0.remove_sync(key).map(|(_, v)| v)
     }
 
     fn set(
@@ -40,7 +40,7 @@ impl StorageBackend for SccHashMapBackend {
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
         //trace!("Set: {:?}", &record.header);
         if record.header.cas > 0 {
-            match self.0.get(&key) {
+            match self.0.get_sync(&key) {
                 Some(mut key_value_entry) => {
                     let key_value = key_value_entry.get_mut();
                     if key_value.header.cas != record.header.cas {
@@ -57,12 +57,12 @@ impl StorageBackend for SccHashMapBackend {
                     record.header.cas += 1;
                     record.header.timestamp = peripherals.timestamp();
                     let cas = record.header.cas;
-                    self.0.insert(key, record);
+                    self.0.insert_sync(key, record);
                     Ok(SetStatus { cas })
                 }
             }
         } else {
-            self.0.insert(key, record);
+            self.0.insert_sync(key, record);
             Ok(SetStatus { cas: 0 })
         }
     }
@@ -73,7 +73,7 @@ impl StorageBackend for SccHashMapBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let mut cas_match: Option<bool> = None;
-        match self.0.remove_if(&key, |record| -> bool {
+        match self.0.remove_if_sync(&key, |record| -> bool {
             let result = header.cas == 0 || record.header.cas == header.cas;
             cas_match = Some(result);
             result
@@ -90,7 +90,7 @@ impl StorageBackend for SccHashMapBackend {
         if header.time_to_live > 0 {
             unimplemented!()
         } else {
-            self.0.clear();
+            self.0.clear_sync();
         }
     }
 
