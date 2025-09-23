@@ -55,13 +55,14 @@ public:
     const uint8_t* tail = data + nblocks * 8;
     uint64_t k = 0;
 
-    if (len % 8 >= 7) k ^= static_cast<uint64_t>(tail[6]) << 48;
-    if (len % 8 >= 6) k ^= static_cast<uint64_t>(tail[5]) << 40;
-    if (len % 8 >= 5) k ^= static_cast<uint64_t>(tail[4]) << 32;
-    if (len % 8 >= 4) k ^= static_cast<uint64_t>(tail[3]) << 24;
-    if (len % 8 >= 3) k ^= static_cast<uint64_t>(tail[2]) << 16;
-    if (len % 8 >= 2) k ^= static_cast<uint64_t>(tail[1]) << 8;
-    if (len % 8 >= 1) {
+    const size_t tail_len = len % 8;
+    if (tail_len >= 7) k ^= static_cast<uint64_t>(tail[6]) << 48;
+    if (tail_len >= 6) k ^= static_cast<uint64_t>(tail[5]) << 40;
+    if (tail_len >= 5) k ^= static_cast<uint64_t>(tail[4]) << 32;
+    if (tail_len >= 4) k ^= static_cast<uint64_t>(tail[3]) << 24;
+    if (tail_len >= 3) k ^= static_cast<uint64_t>(tail[2]) << 16;
+    if (tail_len >= 2) k ^= static_cast<uint64_t>(tail[1]) << 8;
+    if (tail_len >= 1) {
       k ^= static_cast<uint64_t>(tail[0]);
       k *= c1;
       k = rotl64(k, 31);
