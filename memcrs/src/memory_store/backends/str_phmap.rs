@@ -65,10 +65,7 @@ impl StorageBackend for PhmapStringBackend {
         let found =
             unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if found {
-            let shadow = out.to_record();
-            let val = shadow.clone();
-            mem::forget(shadow);
-            Ok(val)
+            Ok(out.to_record_ref().clone())
         } else {
             Err(CacheError::NotFound)
         }

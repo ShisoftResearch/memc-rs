@@ -27,10 +27,7 @@ impl StorageBackend for DashMapBackend {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.get(&ukey) {
             Some(v) => {
-                let shadow = v.to_record();
-                let val = shadow.clone();
-                mem::forget(shadow);
-                Ok(val)
+                Ok(v.to_record_ref().clone())
             },
             None => Err(CacheError::NotFound),
         }
@@ -110,8 +107,8 @@ impl StorageBackend for DashMapBackend {
             .iter()
             .filter(|entry: &RefMulti<UnifiedStr, MapValue, UnifiedStrHasher>| {
                 let key_bytes = Bytes::copy_from_slice(entry.key().as_bytes_trimmed());
-                let record = entry.value().to_record();
-                f(&key_bytes, &record)
+                let record = entry.value().to_record_ref();
+                f(&key_bytes, record)
             })
             .map(|entry: RefMulti<UnifiedStr, MapValue, UnifiedStrHasher>| {
                 Bytes::copy_from_slice(entry.key().as_bytes_trimmed())

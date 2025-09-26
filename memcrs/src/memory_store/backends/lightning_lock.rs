@@ -33,10 +33,7 @@ impl StorageBackend for LightningLockBackend {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.get(&ukey) {
             Some(v) => {
-                let shadow = v.to_record();
-                let val = shadow.clone();
-                mem::forget(shadow);
-                Ok(val)
+                Ok(v.to_record_ref().clone())
             },
             None => Err(CacheError::NotFound),
         }
@@ -108,8 +105,8 @@ impl StorageBackend for LightningLockBackend {
             .entries()
             .into_iter()
             .filter(|(k, v)| {
-                let rec = v.to_record();
-                f(&Bytes::copy_from_slice(k.as_bytes_trimmed()), &rec)
+                let rec = v.to_record_ref();
+                f(&Bytes::copy_from_slice(k.as_bytes_trimmed()), rec)
             })
             .map(|(k, _v)| Bytes::copy_from_slice(k.as_bytes_trimmed()))
             .collect()

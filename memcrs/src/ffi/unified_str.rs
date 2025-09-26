@@ -285,6 +285,13 @@ impl MapValue {
     }
     
     #[inline]
+    pub fn to_record_ref(&self) -> &'static Record {
+        unsafe {
+            return &*(&self.data as *const [u8; MAP_VAL_BUFFER_CAP] as *const Record);
+        }
+    }
+
+    #[inline]
     pub fn to_record(&self) -> Record {
         unsafe {
             return ptr::read(&self.data as *const [u8; MAP_VAL_BUFFER_CAP] as *const Record);

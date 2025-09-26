@@ -30,10 +30,7 @@ impl StorageBackend for RwMapBackend {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.read().get(&ukey) {
             Some(v) => {
-                let shadow = v.to_record();
-                let val = shadow.clone();
-                mem::forget(shadow);
-                Ok(val)
+                Ok(v.to_record_ref().clone())
             },
             None => Err(CacheError::NotFound),
         }
@@ -114,8 +111,8 @@ impl StorageBackend for RwMapBackend {
             .iter()
             .filter(|(unified_key, map_value)| {
                 let key_bytes = Bytes::copy_from_slice(unified_key.as_bytes_trimmed());
-                let record = map_value.to_record();
-                f(&key_bytes, &record)
+                let record = map_value.to_record_ref();
+                f(&key_bytes, record)
             })
             .map(|(unified_key, _map_value)| {
                 Bytes::copy_from_slice(unified_key.as_bytes_trimmed())

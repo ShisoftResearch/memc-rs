@@ -60,10 +60,7 @@ impl StorageBackend for ParlayStringBackend {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
         if unsafe { get_string_kv(*self.map, &ukey, &mut out as *mut MapValue) } {
-            let shadow = out.to_record();
-            let val = shadow.clone();
-            mem::forget(shadow);
-            Ok(val)
+            Ok(out.to_record_ref().clone())
         } else {
             Err(CacheError::NotFound)
         }
