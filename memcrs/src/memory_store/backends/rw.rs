@@ -4,12 +4,9 @@ use parking_lot::RwLock;
 
 use super::StorageBackend;
 use crate::{
-    cache::{
-        cache::SetStatus,
-        error::CacheError,
-    },
-    memory_store::store::Peripherals,
+    cache::{cache::SetStatus, error::CacheError},
     ffi::unified_str::*,
+    memory_store::store::Peripherals,
 };
 use bytes::Bytes;
 
@@ -29,9 +26,7 @@ impl StorageBackend for RwMapBackend {
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.read().get(&ukey) {
-            Some(v) => {
-                Ok(v.to_record_ref().clone())
-            },
+            Some(v) => Ok(v.to_record_ref().clone()),
             None => Err(CacheError::NotFound),
         }
     }
@@ -114,9 +109,7 @@ impl StorageBackend for RwMapBackend {
                 let record = map_value.to_record_ref();
                 f(&key_bytes, record)
             })
-            .map(|(unified_key, _map_value)| {
-                Bytes::copy_from_slice(unified_key.as_bytes_trimmed())
-            })
+            .map(|(unified_key, _map_value)| Bytes::copy_from_slice(unified_key.as_bytes_trimmed()))
             .collect()
     }
 }

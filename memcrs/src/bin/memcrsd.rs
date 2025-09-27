@@ -36,7 +36,7 @@ fn main() {
             process::exit(1);
         }
     };
-    
+
     // Initialize env_logger with the log level based on verbosity
     env_logger::Builder::from_default_env()
         .filter_level(get_log_level_filter(cli_config.verbose))

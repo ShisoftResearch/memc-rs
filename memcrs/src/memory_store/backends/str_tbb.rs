@@ -9,9 +9,7 @@ use crate::{
 };
 
 use super::StorageBackend;
-use crate::ffi::unified_str::{
-    UnifiedStr, MapValue, MAP_VAL_BUFFER_CAP,
-};
+use crate::ffi::unified_str::{MapValue, UnifiedStr, MAP_VAL_BUFFER_CAP};
 
 #[repr(C)]
 pub struct TbbStringMapOpaque {
@@ -21,22 +19,14 @@ pub struct TbbStringMapOpaque {
 extern "C" {
     fn new_tbb_string_map(capacity: usize) -> *mut TbbStringMapOpaque;
     fn free_tbb_string_map(map: *mut TbbStringMapOpaque);
-    fn tbb_string_insert(
-        map: *mut TbbStringMapOpaque,
-        key: &UnifiedStr,
-        value: &MapValue,
-    ) -> bool;
+    fn tbb_string_insert(map: *mut TbbStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
     fn tbb_string_get(
         map: *mut TbbStringMapOpaque,
         key: &UnifiedStr,
         out_value: *mut MapValue,
     ) -> bool;
     fn tbb_string_remove(map: *mut TbbStringMapOpaque, key: &UnifiedStr) -> bool;
-    fn tbb_string_update(
-        map: *mut TbbStringMapOpaque,
-        key: &UnifiedStr,
-        value: &MapValue,
-    ) -> bool;
+    fn tbb_string_update(map: *mut TbbStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
 }
 
 pub struct TbbStringBackend {
@@ -98,9 +88,7 @@ impl StorageBackend for TbbStringBackend {
             let uval = MapValue::from_record(record);
             let ok = unsafe { tbb_string_update(*self.map, &ukey, &uval) };
             if ok {
-                Ok(SetStatus {
-                    cas,
-                })
+                Ok(SetStatus { cas })
             } else {
                 Err(CacheError::KeyExists)
             }

@@ -9,9 +9,7 @@ use crate::{
 };
 
 use super::StorageBackend;
-use crate::ffi::unified_str::{
-    UnifiedStr, MapValue, UNIFIED_STR_CAP, MAP_VAL_BUFFER_CAP,
-};
+use crate::ffi::unified_str::{MapValue, UnifiedStr, MAP_VAL_BUFFER_CAP, UNIFIED_STR_CAP};
 
 #[repr(C)]
 pub struct SeqStringMapOpaque {
@@ -26,11 +24,7 @@ extern "C" {
         key: &UnifiedStr,
         out_value: *mut MapValue,
     ) -> bool;
-    fn seq_string_insert(
-        map: *mut SeqStringMapOpaque,
-        key: &UnifiedStr,
-        value: &MapValue,
-    ) -> bool;
+    fn seq_string_insert(map: *mut SeqStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
     fn seq_string_remove(map: *mut SeqStringMapOpaque, key: &UnifiedStr) -> bool;
     fn seq_string_size(map: *mut SeqStringMapOpaque) -> i64;
     fn seq_string_update(map: *mut SeqStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
@@ -95,9 +89,7 @@ impl StorageBackend for SeqStringBackend {
             let uval = MapValue::from_record(record);
             let ok = unsafe { seq_string_update(*self.map, &ukey, &uval) };
             if ok {
-                Ok(SetStatus {
-                    cas,
-                })
+                Ok(SetStatus { cas })
             } else {
                 Err(CacheError::KeyExists)
             }

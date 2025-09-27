@@ -9,9 +9,7 @@ use crate::{
 };
 
 use super::StorageBackend;
-use crate::ffi::unified_str::{
-    UnifiedStr, MapValue, UNIFIED_STR_CAP, MAP_VAL_BUFFER_CAP,
-};
+use crate::ffi::unified_str::{MapValue, UnifiedStr, MAP_VAL_BUFFER_CAP, UNIFIED_STR_CAP};
 
 #[repr(C)]
 pub struct CuckooStringMapOpaque {
@@ -33,7 +31,11 @@ extern "C" {
     ) -> bool;
     fn cuckoo_string_remove(map: *mut CuckooStringMapOpaque, key: &UnifiedStr) -> bool;
     fn cuckoo_string_size(map: *mut CuckooStringMapOpaque) -> i64;
-    fn cuckoo_string_update(map: *mut CuckooStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
+    fn cuckoo_string_update(
+        map: *mut CuckooStringMapOpaque,
+        key: &UnifiedStr,
+        value: &MapValue,
+    ) -> bool;
 }
 
 pub struct LibcuckooStringBackend {
@@ -95,9 +97,7 @@ impl StorageBackend for LibcuckooStringBackend {
             let uval = MapValue::from_record(record);
             let ok = unsafe { cuckoo_string_update(*self.map, &ukey, &uval) };
             if ok {
-                Ok(SetStatus {
-                    cas,
-                })
+                Ok(SetStatus { cas })
             } else {
                 Err(CacheError::KeyExists)
             }

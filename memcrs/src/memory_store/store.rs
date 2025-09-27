@@ -7,8 +7,8 @@ use serde_derive::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use super::backends::*;
 use super::backends::StorageBackend;
+use super::backends::*;
 pub type DefaultMemoryStore = MemoryStore<lightning::LightningBackend>;
 
 #[derive(Serialize, Deserialize)]

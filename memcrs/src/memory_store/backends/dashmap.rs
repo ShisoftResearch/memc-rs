@@ -1,13 +1,12 @@
 use super::StorageBackend;
 use crate::{
-    cache::{
-        cache::SetStatus,
-        error::CacheError,
-    }, ffi::unified_str::*, memory_store::store::Peripherals
+    cache::{cache::SetStatus, error::CacheError},
+    ffi::unified_str::*,
+    memory_store::store::Peripherals,
 };
+use bytes::Bytes;
 use dashmap::mapref::multiple::RefMulti;
 use dashmap::DashMap;
-use bytes::Bytes;
 use std::mem;
 
 pub struct DashMapBackend(DashMap<UnifiedStr, MapValue, UnifiedStrHasher>);
@@ -26,9 +25,7 @@ impl StorageBackend for DashMapBackend {
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.get(&ukey) {
-            Some(v) => {
-                Ok(v.to_record_ref().clone())
-            },
+            Some(v) => Ok(v.to_record_ref().clone()),
             None => Err(CacheError::NotFound),
         }
     }

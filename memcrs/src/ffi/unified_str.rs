@@ -247,28 +247,20 @@ impl UnifiedStr {
     pub fn from_bytes(src: &[u8]) -> Self {
         let mut data = [0u8; UNIFIED_STR_CAP];
         let len = core::cmp::min(src.len(), UNIFIED_STR_DATA_CAP);
-        data[..len].copy_from_slice(&src[..len]);
+        data[1..len + 1].copy_from_slice(&src[..len]);
         // Store the original length in the last byte
-        data[UNIFIED_STR_DATA_CAP] = len as u8;
+        data[0] = len as u8;
         Self { data }
     }
     #[inline]
-    pub fn from_str(s: &str) -> Self {
-        Self::from_bytes(s.as_bytes())
-    }
-    #[inline]
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.data
-    }
-    #[inline]
     pub fn as_bytes_trimmed(&self) -> &[u8] {
-        let stored_len = self.data[UNIFIED_STR_DATA_CAP] as usize;
+        let stored_len = self.len();
         let len = core::cmp::min(stored_len, UNIFIED_STR_DATA_CAP);
-        &self.data[..len]
+        &self.data[1..len+1]
     }
     #[inline]
-    pub fn len_trimmed(&self) -> usize {
-        self.as_bytes_trimmed().len()
+    pub fn len(&self) -> usize {
+        self.data[0] as usize
     }
 }
 

@@ -9,9 +9,7 @@ use crate::{
 };
 
 use super::StorageBackend;
-use crate::ffi::unified_str::{
-    UnifiedStr, MapValue, UNIFIED_STR_CAP, MAP_VAL_BUFFER_CAP,
-};
+use crate::ffi::unified_str::{MapValue, UnifiedStr, MAP_VAL_BUFFER_CAP, UNIFIED_STR_CAP};
 
 #[repr(C)]
 pub struct ParallelStringMapOpaque {
@@ -33,7 +31,11 @@ extern "C" {
     ) -> bool;
     fn parallel_string_remove(map: *mut ParallelStringMapOpaque, key: &UnifiedStr) -> bool;
     fn parallel_string_size(map: *mut ParallelStringMapOpaque) -> i64;
-    fn parallel_string_update(map: *mut ParallelStringMapOpaque, key: &UnifiedStr, value: &MapValue) -> bool;
+    fn parallel_string_update(
+        map: *mut ParallelStringMapOpaque,
+        key: &UnifiedStr,
+        value: &MapValue,
+    ) -> bool;
 }
 
 pub struct PhmapStringBackend {
@@ -62,8 +64,7 @@ impl StorageBackend for PhmapStringBackend {
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
-        let found =
-            unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
+        let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if found {
             Ok(out.to_record_ref().clone())
         } else {
@@ -76,8 +77,7 @@ impl StorageBackend for PhmapStringBackend {
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
-        let found =
-            unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
+        let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if !found {
             return None;
         }
@@ -105,9 +105,7 @@ impl StorageBackend for PhmapStringBackend {
             let uval = MapValue::from_record(record);
             let ok = unsafe { parallel_string_update(*self.map, &ukey, &uval) };
             if ok {
-                Ok(SetStatus {
-                    cas,
-                })
+                Ok(SetStatus { cas })
             } else {
                 Err(CacheError::KeyExists)
             }
@@ -127,8 +125,7 @@ impl StorageBackend for PhmapStringBackend {
         let mut out = MapValue {
             data: [0; MAP_VAL_BUFFER_CAP],
         };
-        let found =
-            unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
+        let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
         if !found {
             return Err(CacheError::NotFound);
         }

@@ -11,12 +11,10 @@ use crate::{
 };
 
 use super::StorageBackend;
-use crate::ffi::unified_str::{UnifiedStr, UnifiedStrHasher, MapValue};
+use crate::ffi::unified_str::{MapValue, UnifiedStr, UnifiedStrHasher};
 use bytes::Bytes;
 
-pub struct LightningLockBackend(
-    LockingHashMap<UnifiedStr, MapValue, System, UnifiedStrHasher>,
-);
+pub struct LightningLockBackend(LockingHashMap<UnifiedStr, MapValue, System, UnifiedStrHasher>);
 
 impl StorageBackend for LightningLockBackend {
     fn init(cap: usize) -> Self {
@@ -32,9 +30,7 @@ impl StorageBackend for LightningLockBackend {
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
         match self.0.get(&ukey) {
-            Some(v) => {
-                Ok(v.to_record_ref().clone())
-            },
+            Some(v) => Ok(v.to_record_ref().clone()),
             None => Err(CacheError::NotFound),
         }
     }
