@@ -144,7 +144,10 @@ impl MemcStore {
                             value -= delta.delta;
                         }
                         record.value = Bytes::from(value.to_string());
-                        record.header = header;
+                        // Don't overwrite the CAS - preserve it for proper CAS checking
+                        record.header.timestamp = header.timestamp;
+                        record.header.flags = header.flags;
+                        record.header.time_to_live = header.time_to_live;
                         self.set(key, record).map(|result| DeltaResult {
                             cas: result.cas,
                             value,

@@ -1,4 +1,4 @@
-use super::StorageBackend;
+use super::{StorageBackend, cas_common::CasOperations};
 use crate::{
     cache::{cache::SetStatus, error::CacheError},
     ffi::unified_str::*,
@@ -7,7 +7,6 @@ use crate::{
 use bytes::Bytes;
 use dashmap::mapref::multiple::RefMulti;
 use dashmap::DashMap;
-use std::mem;
 
 pub struct DashMapBackend(DashMap<UnifiedStr, MapValue, UnifiedStrHasher>);
 
@@ -45,18 +44,18 @@ impl StorageBackend for DashMapBackend {
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        if record.header.cas > 0 {
-            record.header.cas += 1;
-            record.header.timestamp = peripherals.timestamp();
-            let cas = record.header.cas;
-            let uval = MapValue::from_record(record);
-            self.0.insert(ukey, uval);
-            Ok(SetStatus { cas })
-        } else {
-            let uval = MapValue::from_record(record);
-            self.0.insert(ukey, uval);
-            Ok(SetStatus { cas: 0 })
-        }
+        
+        let result = CasOperations::execute_set_operation(
+            &mut record,
+            peripherals,
+            || {
+                self.0.get(&ukey).map(|v| v.to_record_ref().clone())
+            },
+        )?;
+        
+        let uval = MapValue::from_record(record);
+        self.0.insert(ukey, uval);
+        Ok(result)
     }
 
     fn delete(
@@ -65,19 +64,16 @@ impl StorageBackend for DashMapBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        let mut cas_match: Option<bool> = None;
-        match self.0.remove_if(&ukey, |_key, map_value| -> bool {
-            let record = map_value.to_record();
-            let result = header.cas == 0 || record.header.cas == header.cas;
-            cas_match = Some(result);
-            result
-        }) {
-            Some(key_value) => Ok(key_value.1.to_record()),
-            None => match cas_match {
-                Some(_value) => Err(CacheError::KeyExists),
-                None => Err(CacheError::NotFound),
+        
+        CasOperations::execute_delete_operation(
+            &header,
+            || {
+                self.0.get(&ukey).map(|v| v.to_record_ref().clone())
             },
-        }
+            || {
+                self.0.remove(&ukey).map(|(_, v)| v.to_record())
+            },
+        )
     }
 
     fn flush(&self, header: crate::cache::cache::CacheMetaData) {

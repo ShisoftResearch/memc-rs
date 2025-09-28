@@ -1,4 +1,4 @@
-use super::StorageBackend;
+use super::{StorageBackend, cas_common::CasOperations};
 use crate::{
     cache::{
         cache::{KeyType, Record, SetStatus},
@@ -38,14 +38,20 @@ impl StorageBackend for FlurryMapBackend {
         mut record: crate::memcache::store::Record,
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
-        //trace!("Set: {:?}", &record.header);
         let mref = self.0.pin();
-        if record.header.cas > 0 {
-            unimplemented!()
-        } else {
-            mref.insert(key, record);
-            Ok(SetStatus { cas: 0 })
-        }
+        
+        let result = CasOperations::execute_set_operation(
+            &mut record,
+            peripherals,
+            || {
+                mref.get(&key).cloned()
+            },
+        )?;
+        
+        // Insert/update the record in the map
+        mref.insert(key, record);
+        
+        Ok(result)
     }
 
     fn delete(
@@ -53,8 +59,17 @@ impl StorageBackend for FlurryMapBackend {
         key: crate::memcache::store::KeyType,
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
-        let mut cas_match: Option<bool> = None;
-        unimplemented!()
+        let mref = self.0.pin();
+        
+        CasOperations::execute_delete_operation(
+            &header,
+            || {
+                mref.get(&key).cloned()
+            },
+            || {
+                mref.remove(&key).cloned()
+            },
+        )
     }
 
     fn flush(&self, header: crate::cache::cache::CacheMetaData) {

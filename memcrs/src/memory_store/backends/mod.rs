@@ -4,6 +4,7 @@ use crate::memcache::store::{KeyType, Record};
 
 use super::store::Peripherals;
 
+pub mod cas_common;
 pub mod cht;
 pub mod concache;
 pub mod contrie;

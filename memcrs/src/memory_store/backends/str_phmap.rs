@@ -1,4 +1,3 @@
-use std::mem;
 use std::sync::Arc;
 
 use crate::cache::error::CacheError;
@@ -8,8 +7,8 @@ use crate::{
     memory_store::store::Peripherals,
 };
 
-use super::StorageBackend;
-use crate::ffi::unified_str::{MapValue, UnifiedStr, MAP_VAL_BUFFER_CAP, UNIFIED_STR_CAP};
+use super::{StorageBackend, cas_common::CasOperations};
+use crate::ffi::unified_str::{MapValue, UnifiedStr, MAP_VAL_BUFFER_CAP};
 
 #[repr(C)]
 pub struct ParallelStringMapOpaque {
@@ -96,49 +95,63 @@ impl StorageBackend for PhmapStringBackend {
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<SetStatus> {
         let ukey = UnifiedStr::from_bytes(&key);
-        if record.header.cas > 0 {
-            // Emulate CAS: get existing value and only insert if cas matches; we cannot read CAS from FFI store
-            // For benchmarking, just bump CAS and write.
-            record.header.cas += 1;
-            record.header.timestamp = peripherals.timestamp();
-            let cas = record.header.cas;
-            let uval = MapValue::from_record(record);
-            let ok = unsafe { parallel_string_update(*self.map, &ukey, &uval) };
-            if ok {
-                Ok(SetStatus { cas })
-            } else {
-                Err(CacheError::KeyExists)
-            }
-        } else {
-            let uval = MapValue::from_record(record);
-            let ok = unsafe { parallel_string_update(*self.map, &ukey, &uval) };
-            if ok {
-                Ok(SetStatus { cas: 0 })
-            } else {
-                Ok(SetStatus { cas: 0 })
-            }
-        }
+        
+        let result = CasOperations::execute_set_operation(
+            &mut record,
+            peripherals,
+            || {
+                let mut out = MapValue {
+                    data: [0; MAP_VAL_BUFFER_CAP],
+                };
+                let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
+                if found {
+                    Some(out.to_record_ref().clone())
+                } else {
+                    None
+                }
+            },
+        )?;
+        
+        // Insert/update the record in the map
+        let uval = MapValue::from_record(record);
+        let _ = unsafe { parallel_string_update(*self.map, &ukey, &uval) };
+        
+        Ok(result)
     }
 
     fn delete(&self, key: KeyType, header: CacheMetaData) -> crate::cache::error::Result<Record> {
         let ukey = UnifiedStr::from_bytes(&key);
-        let mut out = MapValue {
-            data: [0; MAP_VAL_BUFFER_CAP],
-        };
-        let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
-        if !found {
-            return Err(CacheError::NotFound);
-        }
-        let matching = header.cas == 0; // Emulate CAS semantics only partially
-        if !matching {
-            return Err(CacheError::KeyExists);
-        }
-        let removed = unsafe { parallel_string_remove(*self.map, &ukey) };
-        if removed {
-            Ok(out.to_record())
-        } else {
-            Err(CacheError::NotFound)
-        }
+        
+        CasOperations::execute_delete_operation(
+            &header,
+            || {
+                let mut out = MapValue {
+                    data: [0; MAP_VAL_BUFFER_CAP],
+                };
+                let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
+                if found {
+                    Some(out.to_record_ref().clone())
+                } else {
+                    None
+                }
+            },
+            || {
+                let mut out = MapValue {
+                    data: [0; MAP_VAL_BUFFER_CAP],
+                };
+                let found = unsafe { parallel_string_get(*self.map, &ukey, &mut out as *mut MapValue) };
+                if found {
+                    let removed = unsafe { parallel_string_remove(*self.map, &ukey) };
+                    if removed {
+                        Some(out.to_record())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            },
+        )
     }
 
     fn flush(&self, _header: CacheMetaData) { /* not supported */

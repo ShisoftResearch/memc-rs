@@ -1,4 +1,4 @@
-use std::{alloc::System, mem};
+use std::alloc::System;
 
 use lightning::map::{Map, PtrHashMap};
 
@@ -10,7 +10,7 @@ use crate::{
     memory_store::store::Peripherals,
 };
 
-use super::StorageBackend;
+use super::{StorageBackend, cas_common::CasOperations};
 use crate::ffi::unified_str::{MapValue, UnifiedStr, UnifiedStrHasher};
 use bytes::Bytes;
 
@@ -50,18 +50,20 @@ impl StorageBackend for LightningCopyBackend {
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        if record.header.cas > 0 {
-            record.header.cas += 1;
-            record.header.timestamp = peripherals.timestamp();
-            let cas = record.header.cas;
-            let uval = MapValue::from_record(record);
-            self.0.insert_no_rt(ukey, uval);
-            Ok(crate::cache::cache::SetStatus { cas })
-        } else {
-            let uval = MapValue::from_record(record);
-            self.0.insert_no_rt(ukey, uval);
-            Ok(crate::cache::cache::SetStatus { cas: 0 })
-        }
+        
+        let result = CasOperations::execute_set_operation(
+            &mut record,
+            peripherals,
+            || {
+                self.0.get(&ukey).map(|v| v.to_record_ref().clone())
+            },
+        )?;
+        
+        // Insert/update the record in the map
+        let uval = MapValue::from_record(record);
+        self.0.insert_no_rt(ukey, uval);
+        
+        Ok(result)
     }
 
     fn delete(
@@ -70,19 +72,16 @@ impl StorageBackend for LightningCopyBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        if header.cas == 0 {
-            return self
-                .0
-                .remove(&ukey)
-                .map(|v| v.to_record())
-                .map(|mut record| {
-                    record.header = header;
-                    record
-                })
-                .ok_or(CacheError::NotFound);
-        } else {
-            return Err(CacheError::KeyExists);
-        }
+        
+        CasOperations::execute_delete_operation(
+            &header,
+            || {
+                self.0.get(&ukey).map(|v| v.to_record_ref().clone())
+            },
+            || {
+                self.0.remove(&ukey).map(|v| v.to_record())
+            },
+        )
     }
 
     fn flush(&self, header: crate::cache::cache::CacheMetaData) {

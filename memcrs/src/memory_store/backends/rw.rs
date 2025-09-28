@@ -2,7 +2,7 @@ use std::{collections::HashMap, mem};
 
 use parking_lot::RwLock;
 
-use super::StorageBackend;
+use super::{StorageBackend, cas_common::CasOperations};
 use crate::{
     cache::{cache::SetStatus, error::CacheError},
     ffi::unified_str::*,
@@ -46,18 +46,19 @@ impl StorageBackend for RwMapBackend {
         peripherals: &Peripherals,
     ) -> crate::cache::error::Result<crate::cache::cache::SetStatus> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        if record.header.cas > 0 {
-            record.header.cas += 1;
-            record.header.timestamp = peripherals.timestamp();
-            let cas = record.header.cas;
-            let uval = MapValue::from_record(record);
-            self.0.write().insert(ukey, uval);
-            Ok(SetStatus { cas })
-        } else {
-            let uval = MapValue::from_record(record);
-            self.0.write().insert(ukey, uval);
-            Ok(SetStatus { cas: 0 })
-        }
+        let mut lock = self.0.write();
+        
+        let result = CasOperations::execute_set_operation(
+            &mut record,
+            peripherals,
+            || {
+                lock.get(&ukey).map(|v| v.to_record_ref().clone())
+            },
+        )?;
+        
+        let uval = MapValue::from_record(record);
+        lock.insert(ukey, uval);
+        Ok(result)
     }
 
     fn delete(
@@ -66,18 +67,28 @@ impl StorageBackend for RwMapBackend {
         header: crate::cache::cache::CacheMetaData,
     ) -> crate::cache::error::Result<crate::memcache::store::Record> {
         let ukey = UnifiedStr::from_bytes(&key[..]);
-        let mut lock = self.0.write();
-        if let Some(map_value) = lock.get(&ukey) {
-            let record = map_value.to_record();
-            let result = header.cas == 0 || record.header.cas == header.cas;
-            if result {
-                let val = lock.remove(&ukey).unwrap().to_record();
-                return Ok(val);
-            } else {
-                return Err(CacheError::KeyExists);
-            }
+        
+        if header.cas == 0 {
+            // If CAS is 0, delete without CAS checking
+            let mut lock = self.0.write();
+            lock.remove(&ukey).map(|v| v.to_record()).ok_or_else(CasOperations::not_found_error)
         } else {
-            return Err(CacheError::NotFound);
+            // Check if the record exists and CAS matches
+            if let Some(existing_record) = {
+                let lock = self.0.read();
+                lock.get(&ukey).map(|v| v.to_record_ref().clone())
+            } {
+                if CasOperations::check_cas_match(existing_record.header.cas, header.cas) {
+                    // CAS matches, remove the record
+                    let mut lock = self.0.write();
+                    lock.remove(&ukey).map(|v| v.to_record()).ok_or_else(CasOperations::not_found_error)
+                } else {
+                    // CAS doesn't match
+                    Err(CasOperations::cas_mismatch_error())
+                }
+            } else {
+                Err(CasOperations::not_found_error())
+            }
         }
     }
 
