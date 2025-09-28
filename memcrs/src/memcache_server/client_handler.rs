@@ -108,7 +108,7 @@ impl Client {
         }
 
         self.recording.push_record(&request); // Record request and then replay
-        let resp = self.handler.handle_request(request);
+        let (resp, _duration) = self.handler.handle_request(request);
         match resp {
             Some(response) => {
                 let mut socket_close = false;
