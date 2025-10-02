@@ -4,8 +4,7 @@ use std::time::Duration;
 use tokio::io;
 use tokio::net::TcpStream;
 use tokio::time::timeout;
-use tracing::{debug, error};
-use log::{info, error as log_error};
+use log::{debug, error, info};
 
 //use tracing_attributes::instrument;
 
@@ -253,6 +252,6 @@ fn log_error(e: io::Error) {
     if e.kind() == io::ErrorKind::NotConnected {
         info!("Error: {}", e);
     } else {
-        log_error!("Error: {}", e);
+        error!("Error: {}", e);
     }
 }

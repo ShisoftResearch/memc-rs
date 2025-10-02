@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::io;
 use tokio::net::TcpListener;
 
-use tracing::{debug, error};
+use log::{debug, error};
 
 //use tracing_attributes::instrument;
 
