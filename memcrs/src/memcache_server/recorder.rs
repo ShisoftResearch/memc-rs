@@ -29,9 +29,9 @@ pub struct ConnectionRecorder {
 impl ConnectionRecorder {
     pub fn new(connection_id: u64, enabled: bool, master: &Arc<MasterRecorder>) -> Self {
         if enabled {
-            info!("Enabled recorder created #{}", connection_id);
+            debug!("Enabled recorder created #{}", connection_id);
         } else {
-            debug!("Recording not enabled for #{}", connection_id);
+            warn!("Recording not enabled for #{}", connection_id);
         }
         ConnectionRecorder {
             operations: Mutex::new(vec![]),
@@ -55,12 +55,12 @@ impl ConnectionRecorder {
             let connection_id = self.connection_id;
             assert!(!all_recordings.contains_key(&connection_id));
             all_recordings.insert(self.connection_id, records);
-            info!(
-                "Moving recording for connection {} after closing",
+            debug!(
+                "Moving recording for connection #{} after closing",
                 self.connection_id
             );
         } else {
-            info!(
+            warn!(
                 "Nothing get recorded for connection #{}",
                 self.connection_id
             );
