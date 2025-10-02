@@ -60,7 +60,7 @@ impl ConnectionRecorder {
                 self.connection_id
             );
         } else {
-            debug!(
+            info!(
                 "Nothing get recorded for connection #{}",
                 self.connection_id
             );
@@ -101,11 +101,12 @@ impl MasterRecorder {
             let filename = format!("{}-{}-rec.bin", name, conn_id);
             let mut f = ZlibEncoder::new(File::create(filename).unwrap(), Compression::default());
             bincode::serialize_into(&mut f, reqs).unwrap();
-            info!(
+            debug!(
                 "Dump recording '{}' for connection {} completed",
                 name, conn_id
             );
         });
+        info!("Dumping recording for '{}' completed, total files: {}", name, conns);
         all_recordings.clear();
         self.enabled.store(false, Relaxed);
         Ok(conns as u32)
