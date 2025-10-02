@@ -18,7 +18,7 @@ core_affinity = "0.8.1"
 lightning-containers = { git = "ssh://git@192.168.10.134/shisoft-x/Lightning.git", branch = "develop" }
 futures = "0.3.28"
 futures-util = "0.3.28"
-log = "0.4.20"
+log = { version = "0.4.20", default-features = false, features = ["std", "max_level_trace", "release_max_level_debug"] }                               
 socket2 = { version = "0.5.3", features = ["all"] }
 num-derive = "0.4.0"
 num-traits = "0.2.16"
@@ -60,6 +60,11 @@ jemallocator = { version ="0.5.4", optional = true }
 
 [features]
 bumpallocator = []
+
+# Enable logging in release builds
+[profile.release]
+opt-level = 3
+debug = false
 
 [build-dependencies]
 cc = "*"
