@@ -5,7 +5,7 @@ use tokio::io;
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tracing::{debug, error};
-use log::{info, error as log_error, warn};
+use log::{info, error as log_error};
 
 //use tracing_attributes::instrument;
 
@@ -100,7 +100,7 @@ impl Client {
     /// Handles single memcached binary request
     /// Returns true if we should leave client receive loop
     async fn handle_request(&mut self, request: BinaryRequest) -> bool {
-        let request_header = request.get_header();
+        let request_header = request.get_header().clone();
         debug!("Got request {:?}", request_header);
 
         if let BinaryRequest::QuitQuietly(_req) = request {
@@ -240,6 +240,7 @@ impl Client {
             _ => "UNKNOWN_STATUS"
         }
     }
+}
 
 impl Drop for Client {
     fn drop(&mut self) {}
