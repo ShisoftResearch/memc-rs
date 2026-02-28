@@ -18,6 +18,9 @@ typedef struct {
     uint8_t data[MAP_VAL_BUFFER_CAP];
 } MapValue;
 
+// Compatibility alias used by seq_string_wrapper interfaces.
+typedef MapValue UnifiedStrLarge;
+
 #ifdef __cplusplus
 }
 
@@ -185,7 +188,7 @@ struct UnifiedStrHash64 {
   }
 };
 
-// Note: UnifiedStrLargeHash removed - UnifiedStrLarge and UNIFIED_STR_LARGE_CAP are not defined
+// Note: UnifiedStrLargeHash removed.
 
 struct UnifiedStrEqual {
   bool operator()(const UnifiedStr& a, const UnifiedStr& b) const {
